@@ -71,10 +71,10 @@ redis:
 - **Endpoint**: `/shorten`
 - **Method**: `POST`
 - **Request Body**:
+
   - `originalURL` (string): The original URL
   - `expiry` (string, optional): Expiration date in `RFC3339` format
   - `maxUsage` (string, optional): Maximum usage count
-
 - **Response**:
 
   ```json
@@ -83,7 +83,6 @@ redis:
     "shortURL": "http://localhost:8080/abc123"
   }
   ```
-
 - **Example**:
 
   ```sh
@@ -95,7 +94,6 @@ redis:
 - **Endpoint**: `/{shortURL}`
 - **Method**: `GET`
 - **Response**: Redirects to the original URL
-
 - **Example**:
 
   ```sh
@@ -112,16 +110,3 @@ redis:
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
-
-### Explanation of the `README.md` File
-
-- **Features**: Describes the main features of the project.
-- **Prerequisites**: Lists the required tools and software needed to run the project.
-- **Installation and Running**: Provides instructions on how to install dependencies and run the project.
-- **Configuration File**: Explains the configuration file and how to set it up.
-- **Usage**: Documents the API, including endpoints, methods, request and response formats, and usage examples.
-- **Development and Contribution**: Offers guidance on how to contribute to the project.
-- **License**: Specifies the project's license type.
-
-This file will help users and developers easily install, run, and use the project.
