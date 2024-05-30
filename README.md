@@ -1,4 +1,4 @@
-```markdown
+
 # Short URL Generator
 
 This project is a URL shortening service that uses Redis for storing URLs. The service includes logging of URL usage, and supports setting expiration dates and usage limits for each URL.
