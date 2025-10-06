@@ -1,8 +1,22 @@
 webserver:
   port: "8080"
   ip: "127.0.0.1"
+  scheme: "http"  # http or https
+  read_timeout: 15  # seconds
+  write_timeout: 15  # seconds
+  shutdown_timeout: 30  # seconds
 
 redis:
   address: "localhost:6379"
   password: ""
   db: 0
+  pool_size: 10
+  min_idle_conns: 5
+  operation_timeout: 5  # seconds for individual operations
+
+ratelimit:
+  requests_per_second: 10
+  burst: 20
+
+features:
+  deduplication_enabled: true  # Check for duplicate original URLs and return existing short URL
