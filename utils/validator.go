@@ -3,7 +3,9 @@ package utils
 import (
 	"net"
 	"net/url"
+	"regexp"
 	"strings"
+	"unicode"
 )
 
 // ValidateURL checks if the provided URL is valid and safe
@@ -91,4 +93,52 @@ func isPrivateIP(hostname string) bool {
 	}
 
 	return false
+}
+
+// ValidateSlug validates a custom slug for short URLs
+// Rules:
+// - Length: minLength-maxLength characters (typically 3-64)
+// - Characters: a-z, A-Z, 0-9, -, _
+// - Must start and end with alphanumeric
+// - Cannot be reserved words
+// - Cannot be pure numbers
+func ValidateSlug(slug string, minLength, maxLength int) error {
+	// Check length
+	if len(slug) < minLength {
+		return ErrSlugTooShort
+	}
+	if len(slug) > maxLength {
+		return ErrSlugTooLong
+	}
+
+	// Check if slug starts with alphanumeric
+	firstChar := rune(slug[0])
+	if !unicode.IsLetter(firstChar) && !unicode.IsDigit(firstChar) {
+		return ErrSlugInvalidStart
+	}
+
+	// Check if slug ends with alphanumeric
+	lastChar := rune(slug[len(slug)-1])
+	if !unicode.IsLetter(lastChar) && !unicode.IsDigit(lastChar) {
+		return ErrSlugInvalidEnd
+	}
+
+	// Check format: only alphanumeric, hyphens, and underscores
+	validFormat := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$`)
+	if !validFormat.MatchString(slug) {
+		return ErrSlugInvalidFormat
+	}
+
+	// Check if it's a pure number (to avoid conflicts with potential ID routes)
+	pureNumber := regexp.MustCompile(`^[0-9]+$`)
+	if pureNumber.MatchString(slug) {
+		return ErrSlugPureNumber
+	}
+
+	// Check if it's a reserved word
+	if IsReservedSlug(slug) {
+		return ErrSlugReserved
+	}
+
+	return nil
 }

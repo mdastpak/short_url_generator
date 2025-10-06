@@ -38,7 +38,11 @@ type CacheConfig struct {
 }
 
 type FeaturesConfig struct {
-	DeduplicationEnabled bool `mapstructure:"deduplication_enabled"`
+	DeduplicationEnabled  bool `mapstructure:"deduplication_enabled"`
+	CustomSlugsEnabled    bool `mapstructure:"custom_slugs_enabled"`
+	MinSlugLength         int  `mapstructure:"min_slug_length"`
+	MaxSlugLength         int  `mapstructure:"max_slug_length"`
+	RequireAuthForCustom  bool `mapstructure:"require_auth_for_custom"` // Future: require API auth for custom slugs
 }
 
 type Config struct {
@@ -115,4 +119,8 @@ func setDefaults() {
 
 	// Features defaults
 	viper.SetDefault("features.deduplication_enabled", true)
+	viper.SetDefault("features.custom_slugs_enabled", true)
+	viper.SetDefault("features.min_slug_length", 3)
+	viper.SetDefault("features.max_slug_length", 64)
+	viper.SetDefault("features.require_auth_for_custom", false)
 }

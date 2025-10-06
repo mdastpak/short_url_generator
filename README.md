@@ -87,6 +87,7 @@ Content-Type: application/json
 
 {
   "originalURL": "https://example.com",
+  "customSlug": "my-link",            // Optional, custom vanity slug (3-64 chars)
   "expiry": "2024-12-31T23:59:59Z",  // Optional, RFC3339 format
   "maxUsage": "10"                    // Optional, integer as string
 }
@@ -96,10 +97,19 @@ Content-Type: application/json
 ```json
 {
   "originalURL": "https://example.com",
-  "shortURL": "http://localhost:8080/abc123",
-  "managementID": "550e8400-e29b-41d4-a716-446655440000"
+  "shortURL": "http://localhost:8080/my-link",
+  "managementID": "550e8400-e29b-41d4-a716-446655440000",
+  "slug": "my-link",
+  "isCustomSlug": true
 }
 ```
+
+**Custom Slug Rules:**
+- Length: 3-64 characters
+- Allowed: letters, numbers, hyphens, underscores
+- Must start/end with alphanumeric
+- Cannot be reserved words (health, admin, api, etc.)
+- Case-insensitive uniqueness
 
 **Important:** Save the `managementID` to update or delete the URL later.
 

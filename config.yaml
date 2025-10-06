@@ -27,3 +27,7 @@ ratelimit:
 
 features:
   deduplication_enabled: true  # Check for duplicate original URLs and return existing short URL
+  custom_slugs_enabled: true   # Allow users to specify custom slugs (vanity URLs)
+  min_slug_length: 3          # Minimum length for custom slugs
+  max_slug_length: 64         # Maximum length for custom slugs
+  require_auth_for_custom: false  # Future: require API authentication for custom slugs

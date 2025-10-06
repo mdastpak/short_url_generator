@@ -18,6 +18,8 @@ type SuccessResponse struct {
 	OriginalURL  string `json:"originalURL"`
 	ShortURL     string `json:"shortURL"`
 	ManagementID string `json:"managementID,omitempty"` // UUID for update/delete operations
+	Slug         string `json:"slug,omitempty"`         // The slug part of the short URL
+	IsCustomSlug bool   `json:"isCustomSlug,omitempty"` // Whether this was a user-provided custom slug
 }
 
 // SendJSONError sends a JSON error response

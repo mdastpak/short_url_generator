@@ -13,6 +13,7 @@ import (
 	"short-url-generator/model"
 	"short-url-generator/utils"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -170,6 +171,7 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	// Parse JSON request
 	var input struct {
 		OriginalURL string `json:"originalURL"`
+		CustomSlug  string `json:"customSlug"` // Optional custom slug
 		Expiry      string `json:"expiry"`
 		MaxUsage    string `json:"maxUsage"`
 	}
@@ -185,6 +187,38 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Str("url", input.OriginalURL).Msg("Invalid URL")
 		SendJSONError(w, http.StatusBadRequest, err, "")
 		return
+	}
+
+	// Validate custom slug if provided and feature is enabled
+	var isCustomSlug bool
+	if input.CustomSlug != "" {
+		if !h.config.Features.CustomSlugsEnabled {
+			SendJSONError(w, http.StatusBadRequest, errors.New("custom slugs are disabled"), "Custom slugs feature is not enabled")
+			return
+		}
+
+		// Validate slug format
+		if err := utils.ValidateSlug(input.CustomSlug, h.config.Features.MinSlugLength, h.config.Features.MaxSlugLength); err != nil {
+			log.Warn().Err(err).Str("slug", input.CustomSlug).Msg("Invalid custom slug")
+			SendJSONError(w, http.StatusBadRequest, err, "")
+			return
+		}
+
+		// Check if slug is already taken (case-insensitive)
+		slugLower := strings.ToLower(input.CustomSlug)
+		exists, err := h.redis.Exists(ctx, slugLower).Result()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to check slug availability")
+			SendJSONError(w, http.StatusInternalServerError, err, "Failed to check slug availability")
+			return
+		}
+		if exists > 0 {
+			SendJSONError(w, http.StatusConflict, errors.New("custom slug already taken"),
+				fmt.Sprintf("The slug '%s' is already in use. Try a different slug or leave blank for auto-generation.", input.CustomSlug))
+			return
+		}
+
+		isCustomSlug = true
 	}
 
 	// Build URL model
@@ -216,35 +250,46 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		url.MaxUsage = maxUsage
 	}
 
-	// Check for duplicate URL if deduplication is enabled
+	// Determine short URL
 	var shortURL string
-	if h.config.Features.DeduplicationEnabled {
-		existingShortURL, err := h.findExistingShortURL(ctx, input.OriginalURL, url.Expiry, url.MaxUsage)
-		if err != nil {
-			log.Error().Err(err).Msg("Error checking for duplicate URL")
-			// Don't fail the request, just log and continue to create new
-		} else if existingShortURL != "" {
-			// Found compatible existing short URL
-			fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, existingShortURL)
-			log.Info().
-				Str("short_url", fullShortURL).
-				Str("original_url", url.OriginalURL).
-				Msg("Returning existing short URL (duplicate)")
+	if isCustomSlug {
+		// Use custom slug (store as lowercase for case-insensitive lookups)
+		shortURL = strings.ToLower(input.CustomSlug)
+		log.Info().
+			Str("custom_slug", input.CustomSlug).
+			Str("short_url", shortURL).
+			Msg("Using custom slug")
+	} else {
+		// Check for duplicate URL if deduplication is enabled
+		if h.config.Features.DeduplicationEnabled {
+			existingShortURL, err := h.findExistingShortURL(ctx, input.OriginalURL, url.Expiry, url.MaxUsage)
+			if err != nil {
+				log.Error().Err(err).Msg("Error checking for duplicate URL")
+				// Don't fail the request, just log and continue to create new
+			} else if existingShortURL != "" {
+				// Found compatible existing short URL
+				fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, existingShortURL)
+				log.Info().
+					Str("short_url", fullShortURL).
+					Str("original_url", url.OriginalURL).
+					Msg("Returning existing short URL (duplicate)")
 
-			SendJSONSuccess(w, http.StatusOK, SuccessResponse{
-				OriginalURL: url.OriginalURL,
-				ShortURL:    fullShortURL,
-			})
+				SendJSONSuccess(w, http.StatusOK, SuccessResponse{
+					OriginalURL: url.OriginalURL,
+					ShortURL:    fullShortURL,
+				})
+				return
+			}
+		}
+
+		// Generate unique short URL with collision detection
+		var err error
+		shortURL, err = h.generateUniqueShortURL(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to generate unique short URL")
+			SendJSONError(w, http.StatusInternalServerError, err, "Failed to generate short URL")
 			return
 		}
-	}
-
-	// Generate unique short URL with collision detection
-	shortURL, err := h.generateUniqueShortURL(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to generate unique short URL")
-		SendJSONError(w, http.StatusInternalServerError, err, "Failed to generate short URL")
-		return
 	}
 	url.ShortURL = shortURL
 
@@ -283,12 +328,15 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		Str("short_url", fullShortURL).
 		Str("original_url", url.OriginalURL).
 		Str("management_id", url.ManagementID).
+		Bool("is_custom_slug", isCustomSlug).
 		Msg("Short URL created")
 
 	SendJSONSuccess(w, http.StatusCreated, SuccessResponse{
 		OriginalURL:  url.OriginalURL,
 		ShortURL:     fullShortURL,
 		ManagementID: url.ManagementID,
+		Slug:         shortURL,
+		IsCustomSlug: isCustomSlug,
 	})
 }
 
