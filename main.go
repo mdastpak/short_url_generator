@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"short-url-generator/cache"
 	"short-url-generator/config"
 	"short-url-generator/handler"
 	appLogger "short-url-generator/logger"
@@ -30,8 +31,20 @@ func main() {
 	// Initialize Redis client
 	rdb := redisClient.NewClient(cfg.Redis)
 
+	// Initialize cache (if enabled)
+	var cacheClient *cache.Cache
+	if cfg.Cache.Enabled {
+		var err error
+		cacheClient, err = cache.New(cfg.Cache)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to initialize cache")
+		}
+	} else {
+		log.Info().Msg("Cache disabled in configuration")
+	}
+
 	// Create handler with dependency injection
-	urlHandler := handler.NewURLHandler(rdb, cfg)
+	urlHandler := handler.NewURLHandler(rdb, cacheClient, cfg)
 
 	// Set up router
 	r := mux.NewRouter()
@@ -44,6 +57,7 @@ func main() {
 
 	// Register routes
 	r.HandleFunc("/health", urlHandler.HealthCheck).Methods("GET")
+	r.HandleFunc("/cache/metrics", urlHandler.CacheMetrics).Methods("GET")
 	r.HandleFunc("/shorten", urlHandler.CreateShortURL).Methods("POST")
 	r.HandleFunc("/{shortURL}", urlHandler.RedirectURL).Methods("GET")
 
@@ -80,6 +94,11 @@ func main() {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatal().Err(err).Msg("Server forced to shutdown")
+	}
+
+	// Close cache
+	if cacheClient != nil {
+		cacheClient.Close()
 	}
 
 	// Close Redis connection

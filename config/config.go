@@ -30,6 +30,13 @@ type RateLimitConfig struct {
 	Burst             int     `mapstructure:"burst"`
 }
 
+type CacheConfig struct {
+	Enabled     bool `mapstructure:"enabled"`
+	MaxSizeMB   int  `mapstructure:"max_size_mb"`
+	TTLSeconds  int  `mapstructure:"ttl_seconds"`
+	CounterSize int  `mapstructure:"counter_size"`
+}
+
 type FeaturesConfig struct {
 	DeduplicationEnabled bool `mapstructure:"deduplication_enabled"`
 }
@@ -37,6 +44,7 @@ type FeaturesConfig struct {
 type Config struct {
 	WebServer WebServerConfig `mapstructure:"webserver"`
 	Redis     RedisConfig     `mapstructure:"redis"`
+	Cache     CacheConfig     `mapstructure:"cache"`
 	RateLimit RateLimitConfig `mapstructure:"ratelimit"`
 	Features  FeaturesConfig  `mapstructure:"features"`
 }
@@ -94,6 +102,12 @@ func setDefaults() {
 	viper.SetDefault("redis.pool_size", 10)
 	viper.SetDefault("redis.min_idle_conns", 5)
 	viper.SetDefault("redis.operation_timeout", 5)
+
+	// Cache defaults
+	viper.SetDefault("cache.enabled", true)
+	viper.SetDefault("cache.max_size_mb", 100)
+	viper.SetDefault("cache.ttl_seconds", 300)      // 5 minutes
+	viper.SetDefault("cache.counter_size", 1000000) // 1M keys
 
 	// RateLimit defaults
 	viper.SetDefault("ratelimit.requests_per_second", 10.0)

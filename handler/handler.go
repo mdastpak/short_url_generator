@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"short-url-generator/cache"
 	"short-url-generator/config"
 	"short-url-generator/model"
 	"short-url-generator/utils"
@@ -34,12 +35,13 @@ var (
 // URLHandler handles URL shortening operations
 type URLHandler struct {
 	redis   *redis.Client
+	cache   *cache.Cache
 	config  config.Config
 	baseURL string
 }
 
 // NewURLHandler creates a new URL handler
-func NewURLHandler(redisClient *redis.Client, cfg config.Config) *URLHandler {
+func NewURLHandler(redisClient *redis.Client, cacheClient *cache.Cache, cfg config.Config) *URLHandler {
 	// Use configured base_url if provided, otherwise construct from scheme, IP, and port
 	baseURL := cfg.WebServer.BaseURL
 	if baseURL == "" {
@@ -47,6 +49,7 @@ func NewURLHandler(redisClient *redis.Client, cfg config.Config) *URLHandler {
 	}
 	return &URLHandler{
 		redis:   redisClient,
+		cache:   cacheClient,
 		config:  cfg,
 		baseURL: baseURL,
 	}
@@ -286,29 +289,56 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	shortURL := vars["shortURL"]
 
-	// Fetch URL data from Redis
-	urlData, err := h.redis.Get(ctx, shortURL).Bytes()
-	if err == redis.Nil {
-		log.Warn().Str("short_url", shortURL).Msg("URL not found")
-		SendJSONError(w, http.StatusNotFound, errors.New("URL not found"), "")
-		return
-	} else if err != nil {
-		log.Error().Err(err).Str("short_url", shortURL).Msg("Failed to retrieve URL from Redis")
-		SendJSONError(w, http.StatusInternalServerError, err, "Failed to retrieve URL")
-		return
+	var url model.URL
+	cacheHit := false
+
+	// Try cache first if enabled
+	if h.config.Cache.Enabled && h.cache != nil {
+		if cachedData, found := h.cache.Get(shortURL); found {
+			if cachedURL, ok := cachedData.(model.URL); ok {
+				url = cachedURL
+				cacheHit = true
+				log.Debug().Str("short_url", shortURL).Msg("Cache hit")
+			}
+		}
 	}
 
-	// Unmarshal URL data
-	var url model.URL
-	if err := json.Unmarshal(urlData, &url); err != nil {
-		log.Error().Err(err).Msg("Failed to unmarshal URL data")
-		SendJSONError(w, http.StatusInternalServerError, err, "Internal server error")
-		return
+	// On cache miss, fetch from Redis
+	if !cacheHit {
+		urlData, err := h.redis.Get(ctx, shortURL).Bytes()
+		if err == redis.Nil {
+			log.Warn().Str("short_url", shortURL).Msg("URL not found")
+			SendJSONError(w, http.StatusNotFound, errors.New("URL not found"), "")
+			return
+		} else if err != nil {
+			log.Error().Err(err).Str("short_url", shortURL).Msg("Failed to retrieve URL from Redis")
+			SendJSONError(w, http.StatusInternalServerError, err, "Failed to retrieve URL")
+			return
+		}
+
+		// Unmarshal URL data
+		if err := json.Unmarshal(urlData, &url); err != nil {
+			log.Error().Err(err).Msg("Failed to unmarshal URL data")
+			SendJSONError(w, http.StatusInternalServerError, err, "Internal server error")
+			return
+		}
+
+		// Populate cache for future requests (if enabled)
+		if h.config.Cache.Enabled && h.cache != nil {
+			// Cost = approximate size of URL struct (estimate 1KB per entry)
+			h.cache.Set(shortURL, url, 1024)
+			log.Debug().Str("short_url", shortURL).Msg("Cached URL data")
+		}
 	}
 
 	// Check expiry
 	if !url.Expiry.IsZero() && time.Now().After(url.Expiry) {
 		log.Info().Str("short_url", shortURL).Msg("URL expired")
+
+		// Invalidate cache
+		if h.config.Cache.Enabled && h.cache != nil {
+			h.cache.Delete(shortURL)
+		}
 
 		// Move to expired list
 		if err := h.redis.RPush(ctx, "expired_urls", shortURL).Err(); err != nil {
@@ -332,6 +362,11 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	if url.MaxUsage > 0 && url.CurrentUsage >= url.MaxUsage {
 		log.Info().Str("short_url", shortURL).Msg("URL usage limit exceeded")
 
+		// Invalidate cache
+		if h.config.Cache.Enabled && h.cache != nil {
+			h.cache.Delete(shortURL)
+		}
+
 		// Move to used up list
 		if err := h.redis.RPush(ctx, "usedup_urls", shortURL).Err(); err != nil {
 			log.Error().Err(err).Msg("Failed to add to used up list")
@@ -352,7 +387,7 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 
 	// Increment usage count
 	url.CurrentUsage++
-	urlData, err = json.Marshal(url)
+	urlData, err := json.Marshal(url)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to marshal updated URL data")
 		SendJSONError(w, http.StatusInternalServerError, err, "Internal server error")
@@ -363,6 +398,11 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("Failed to update usage count")
 		SendJSONError(w, http.StatusInternalServerError, err, "Failed to update usage count")
 		return
+	}
+
+	// Update cache with incremented usage count
+	if h.config.Cache.Enabled && h.cache != nil {
+		h.cache.Set(shortURL, url, 1024)
 	}
 
 	// Log access
@@ -415,4 +455,15 @@ func (h *URLHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		"status": "healthy",
 		"redis":  "connected",
 	})
+}
+
+// CacheMetrics handles GET /cache/metrics
+func (h *URLHandler) CacheMetrics(w http.ResponseWriter, r *http.Request) {
+	if !h.config.Cache.Enabled || h.cache == nil {
+		SendJSONError(w, http.StatusServiceUnavailable, errors.New("cache is disabled"), "")
+		return
+	}
+
+	metrics := h.cache.GetMetricsSnapshot()
+	SendJSONSuccess(w, http.StatusOK, metrics)
 }
