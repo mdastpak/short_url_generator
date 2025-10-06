@@ -9,8 +9,9 @@ import (
 
 // ErrorResponse represents a standardized error response
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Error       string   `json:"error"`
+	Message     string   `json:"message,omitempty"`
+	Suggestions []string `json:"suggestions,omitempty"` // Alternative slug suggestions (for conflicts)
 }
 
 // SuccessResponse represents a successful URL shortening response
@@ -30,6 +31,22 @@ func SendJSONError(w http.ResponseWriter, statusCode int, err error, message str
 	response := ErrorResponse{
 		Error:   err.Error(),
 		Message: message,
+	}
+
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+		log.Error().Err(encodeErr).Msg("Failed to encode error response")
+	}
+}
+
+// SendJSONErrorWithSuggestions sends a JSON error response with alternative suggestions
+func SendJSONErrorWithSuggestions(w http.ResponseWriter, statusCode int, err error, message string, suggestions []string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	response := ErrorResponse{
+		Error:       err.Error(),
+		Message:     message,
+		Suggestions: suggestions,
 	}
 
 	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {

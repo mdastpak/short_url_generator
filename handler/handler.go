@@ -213,8 +213,11 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if exists > 0 {
-			SendJSONError(w, http.StatusConflict, errors.New("custom slug already taken"),
-				fmt.Sprintf("The slug '%s' is already in use. Try a different slug or leave blank for auto-generation.", input.CustomSlug))
+			// Generate alternative slug suggestions
+			suggestions := utils.GenerateSlugSuggestions(ctx, h.redis, input.CustomSlug, h.config.Features.SlugSuggestionsCount)
+			SendJSONErrorWithSuggestions(w, http.StatusConflict, errors.New("custom slug already taken"),
+				fmt.Sprintf("The slug '%s' is already in use. Try a different slug or leave blank for auto-generation.", input.CustomSlug),
+				suggestions)
 			return
 		}
 

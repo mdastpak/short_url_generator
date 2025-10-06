@@ -130,6 +130,25 @@ Content-Type: application/json
 }
 ```
 
+**Custom Slug Conflict (409 Conflict):** *(with alternative suggestions)*
+```json
+{
+  "error": "custom slug already taken",
+  "message": "The slug 'my-link' is already in use. Try a different slug or leave blank for auto-generation.",
+  "suggestions": [
+    "my-link-2",
+    "my-link-3",
+    "my-link-x17"
+  ]
+}
+```
+
+**Note:** When a custom slug is already taken, the API automatically generates up to 3 alternative suggestions using:
+- Numeric suffixes (my-link-2, my-link-3, etc.)
+- Random suffixes (my-link-x17, my-link-x42, etc.)
+
+The number of suggestions can be configured via `features.slug_suggestions_count` in config.yaml.
+
 ### Access Short URL
 
 ```bash
@@ -244,7 +263,12 @@ ratelimit:
   burst: 20
 
 features:
-  deduplication_enabled: true # Smart duplicate URL detection
+  deduplication_enabled: true     # Smart duplicate URL detection
+  custom_slugs_enabled: true      # Allow custom vanity URLs
+  min_slug_length: 3              # Minimum custom slug length
+  max_slug_length: 64             # Maximum custom slug length
+  slug_suggestions_count: 3       # Number of alternatives when slug is taken
+  require_auth_for_custom: false  # Future: require auth for custom slugs
 ```
 
 ### Environment Variables

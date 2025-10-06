@@ -31,3 +31,4 @@ features:
   min_slug_length: 3          # Minimum length for custom slugs
   max_slug_length: 64         # Maximum length for custom slugs
   require_auth_for_custom: false  # Future: require API authentication for custom slugs
+  slug_suggestions_count: 3   # Number of alternative slug suggestions to provide on conflict

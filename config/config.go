@@ -42,7 +42,8 @@ type FeaturesConfig struct {
 	CustomSlugsEnabled    bool `mapstructure:"custom_slugs_enabled"`
 	MinSlugLength         int  `mapstructure:"min_slug_length"`
 	MaxSlugLength         int  `mapstructure:"max_slug_length"`
-	RequireAuthForCustom  bool `mapstructure:"require_auth_for_custom"` // Future: require API auth for custom slugs
+	RequireAuthForCustom  bool `mapstructure:"require_auth_for_custom"`   // Future: require API auth for custom slugs
+	SlugSuggestionsCount  int  `mapstructure:"slug_suggestions_count"`    // Number of alternative suggestions to provide on conflict
 }
 
 type Config struct {
@@ -123,4 +124,5 @@ func setDefaults() {
 	viper.SetDefault("features.min_slug_length", 3)
 	viper.SetDefault("features.max_slug_length", 64)
 	viper.SetDefault("features.require_auth_for_custom", false)
+	viper.SetDefault("features.slug_suggestions_count", 3)
 }
