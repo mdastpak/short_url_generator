@@ -10,6 +10,7 @@ type WebServerConfig struct {
 	Port            string `mapstructure:"port"`
 	IP              string `mapstructure:"ip"`
 	Scheme          string `mapstructure:"scheme"`
+	BaseURL         string `mapstructure:"base_url"`
 	ReadTimeout     int    `mapstructure:"read_timeout"`
 	WriteTimeout    int    `mapstructure:"write_timeout"`
 	ShutdownTimeout int    `mapstructure:"shutdown_timeout"`
@@ -81,6 +82,7 @@ func setDefaults() {
 	viper.SetDefault("webserver.port", "8080")
 	viper.SetDefault("webserver.ip", "127.0.0.1")
 	viper.SetDefault("webserver.scheme", "http")
+	viper.SetDefault("webserver.base_url", "")
 	viper.SetDefault("webserver.read_timeout", 15)
 	viper.SetDefault("webserver.write_timeout", 15)
 	viper.SetDefault("webserver.shutdown_timeout", 30)

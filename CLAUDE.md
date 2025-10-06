@@ -109,6 +109,9 @@ export SHORTURL_REDIS_ADDRESS="redis:6379"
 
 # Override server port
 export SHORTURL_WEBSERVER_PORT="3000"
+
+# Set custom base URL for short links
+export SHORTURL_WEBSERVER_BASE_URL="https://myapp.com"
 ```
 
 All configuration has defaults, so the app can run without `config.yaml` if Redis is on localhost:6379.
@@ -157,7 +160,7 @@ curl -L http://localhost:8080/{shortURL}
 ### Configuration Options
 
 See config.yaml for all options:
-- WebServer: port, IP, scheme (http/https), timeouts
+- WebServer: port, IP, scheme (http/https), base_url, timeouts
 - Redis: address, password, DB, pool size, operation timeout
 - RateLimit: requests per second, burst size
 - Features: deduplication_enabled (default: true)
@@ -178,3 +181,27 @@ Or via environment variable:
 ```sh
 export SHORTURL_FEATURES_DEDUPLICATION_ENABLED=false
 ```
+
+### Base URL Configuration
+
+Configure the public URL for generated short links using the `base_url` setting. This is essential for production deployments where the service is accessed via a domain name or reverse proxy.
+
+**Default behavior (empty string):**
+- Auto-constructs URL from `scheme://ip:port`
+- Example: `http://127.0.0.1:8080`
+
+**Custom domain configuration:**
+```yaml
+webserver:
+  base_url: "https://myapp.com"  # Your public domain
+```
+
+Or via environment variable:
+```sh
+export SHORTURL_WEBSERVER_BASE_URL="https://myapp.com"
+```
+
+**Common use cases:**
+- Production domain: `https://short.example.com`
+- Behind reverse proxy: `http://localhost:80`
+- Short .ir domain: `https://lnk.ir`

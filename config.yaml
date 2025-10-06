@@ -2,6 +2,7 @@ webserver:
   port: "8080"
   ip: "127.0.0.1"
   scheme: "http"  # http or https
+  base_url: ""  # Public URL for short links (e.g., "http://localhost:80" or "https://myapp.com"). Leave empty to auto-construct from scheme, ip, and port
   read_timeout: 15  # seconds
   write_timeout: 15  # seconds
   shutdown_timeout: 30  # seconds

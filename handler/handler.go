@@ -40,7 +40,11 @@ type URLHandler struct {
 
 // NewURLHandler creates a new URL handler
 func NewURLHandler(redisClient *redis.Client, cfg config.Config) *URLHandler {
-	baseURL := fmt.Sprintf("%s://%s:%s", cfg.WebServer.Scheme, cfg.WebServer.IP, cfg.WebServer.Port)
+	// Use configured base_url if provided, otherwise construct from scheme, IP, and port
+	baseURL := cfg.WebServer.BaseURL
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("%s://%s:%s", cfg.WebServer.Scheme, cfg.WebServer.IP, cfg.WebServer.Port)
+	}
 	return &URLHandler{
 		redis:   redisClient,
 		config:  cfg,

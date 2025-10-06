@@ -136,6 +136,7 @@ webserver:
   port: "8080"
   ip: "127.0.0.1"
   scheme: "http"              # http or https
+  base_url: ""                # Public URL for short links (e.g., "https://myapp.com"). Leave empty to auto-construct
   read_timeout: 15            # seconds
   write_timeout: 15           # seconds
   shutdown_timeout: 30        # seconds
@@ -162,6 +163,7 @@ Override any config value using `SHORTURL_` prefix:
 
 ```bash
 export SHORTURL_WEBSERVER_PORT="3000"
+export SHORTURL_WEBSERVER_BASE_URL="https://myapp.com"
 export SHORTURL_REDIS_ADDRESS="redis:6379"
 export SHORTURL_FEATURES_DEDUPLICATION_ENABLED="false"
 ```
