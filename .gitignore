@@ -70,3 +70,4 @@ dump.rdb
 # Coverage reports
 coverage.out
 profile.out
+*.png

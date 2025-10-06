@@ -12,6 +12,7 @@ A production-ready URL shortening service built with Go, featuring Redis persist
 - ✅ **Access Logging**: Track every access with IP, user agent, and timestamp
 - ✅ **URL Deduplication**: Smart duplicate detection with compatibility matching
 - ✅ **In-Memory Cache**: High-performance caching with Ristretto (100× faster)
+- ✅ **QR Code Generation**: On-demand QR codes for any short URL
 
 ### Security & Performance
 - ✅ **URL Validation**: Blocks localhost, private IPs, and invalid schemes (SSRF protection)
@@ -211,6 +212,52 @@ Content-Type: application/json
 - `400 Bad Request`: Missing required fields
 - `403 Forbidden`: Validation failed
 - `404 Not Found`: Management ID not found
+
+### Generate QR Code
+
+```bash
+GET /{shortURL}/qr?size=256&level=medium
+```
+
+Generates a QR code image for any short URL. Perfect for marketing materials, posters, and print media.
+
+**Query Parameters:**
+- `size` (optional): QR code size in pixels
+  - Default: `256`
+  - Range: `128` to `1024`
+  - Example: `?size=512`
+- `level` (optional): Error correction level
+  - Options: `low`, `medium` (default), `high`, `highest`
+  - Higher levels allow recovery from more damage but increase QR size
+  - Example: `?level=high`
+
+**Success Response (200 OK):**
+- Content-Type: `image/png`
+- Cache-Control: `public, max-age=3600` (1 hour)
+- Binary PNG image data
+
+**Examples:**
+```bash
+# Generate default 256px QR code
+curl http://localhost:8080/my-link/qr -o my-link-qr.png
+
+# Generate large 512px QR code with high error correction
+curl "http://localhost:8080/my-link/qr?size=512&level=high" -o large-qr.png
+
+# Generate small 128px QR code
+curl "http://localhost:8080/my-link/qr?size=128" -o small-qr.png
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid size or level parameter
+- `404 Not Found`: Short URL doesn't exist
+
+**Use Cases:**
+- 📄 Print media (posters, flyers, business cards)
+- 📱 Mobile-friendly sharing
+- 🎫 Event tickets and passes
+- 📦 Product packaging
+- 🏪 Retail displays
 
 ### Cache Metrics
 

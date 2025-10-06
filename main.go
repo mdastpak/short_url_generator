@@ -61,6 +61,7 @@ func main() {
 	r.HandleFunc("/shorten", urlHandler.CreateShortURL).Methods("POST")
 	r.HandleFunc("/shorten/{managementID}", urlHandler.UpdateURL).Methods("PUT")
 	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
+	r.HandleFunc("/{shortURL}/qr", urlHandler.GenerateQR).Methods("GET") // QR code generation
 	r.HandleFunc("/{shortURL}", urlHandler.RedirectURL).Methods("GET")
 
 	// Configure HTTP server
