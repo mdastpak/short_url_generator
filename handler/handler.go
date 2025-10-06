@@ -16,16 +16,18 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	shortURLMinLength = 8
-	shortURLMaxLength = 10
-	maxRetries        = 5
-	charset           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-	urlIndexKey       = "url_index" // Redis hash key for URL deduplication index
+	shortURLMinLength   = 8
+	shortURLMaxLength   = 10
+	maxRetries          = 5
+	charset             = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+	urlIndexKey         = "url_index"        // Redis hash key for URL deduplication index
+	managementIndexKey  = "management_index" // Redis hash key for managementID lookup
 )
 
 var (
@@ -187,8 +189,9 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	// Build URL model
 	url := model.URL{
-		OriginalURL: input.OriginalURL,
-		CreatedAt:   time.Now(),
+		ManagementID: uuid.New().String(), // Generate UUID v4 for management operations
+		OriginalURL:  input.OriginalURL,
+		CreatedAt:    time.Now(),
 	}
 
 	// Parse expiry if provided
@@ -269,15 +272,23 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Add to management index for update/delete operations
+	if err := h.redis.HSet(ctx, managementIndexKey, url.ManagementID, shortURL).Err(); err != nil {
+		log.Error().Err(err).Msg("Failed to add URL to management index")
+		// Don't fail the request, URL is already stored
+	}
+
 	fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, shortURL)
 	log.Info().
 		Str("short_url", fullShortURL).
 		Str("original_url", url.OriginalURL).
+		Str("management_id", url.ManagementID).
 		Msg("Short URL created")
 
 	SendJSONSuccess(w, http.StatusCreated, SuccessResponse{
-		OriginalURL: url.OriginalURL,
-		ShortURL:    fullShortURL,
+		OriginalURL:  url.OriginalURL,
+		ShortURL:     fullShortURL,
+		ManagementID: url.ManagementID,
 	})
 }
 

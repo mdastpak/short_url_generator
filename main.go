@@ -59,6 +59,8 @@ func main() {
 	r.HandleFunc("/health", urlHandler.HealthCheck).Methods("GET")
 	r.HandleFunc("/cache/metrics", urlHandler.CacheMetrics).Methods("GET")
 	r.HandleFunc("/shorten", urlHandler.CreateShortURL).Methods("POST")
+	r.HandleFunc("/shorten/{managementID}", urlHandler.UpdateURL).Methods("PUT")
+	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
 	r.HandleFunc("/{shortURL}", urlHandler.RedirectURL).Methods("GET")
 
 	// Configure HTTP server

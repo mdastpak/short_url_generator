@@ -15,8 +15,9 @@ type ErrorResponse struct {
 
 // SuccessResponse represents a successful URL shortening response
 type SuccessResponse struct {
-	OriginalURL string `json:"originalURL"`
-	ShortURL    string `json:"shortURL"`
+	OriginalURL  string `json:"originalURL"`
+	ShortURL     string `json:"shortURL"`
+	ManagementID string `json:"managementID,omitempty"` // UUID for update/delete operations
 }
 
 // SendJSONError sends a JSON error response

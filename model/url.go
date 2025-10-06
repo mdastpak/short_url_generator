@@ -3,6 +3,7 @@ package model
 import "time"
 
 type URL struct {
+	ManagementID string    // UUID v4 for update/delete operations
 	OriginalURL  string
 	ShortURL     string
 	CreatedAt    time.Time

@@ -6,10 +6,12 @@ A production-ready URL shortening service built with Go, featuring Redis persist
 
 ### Core Functionality
 - ✅ **URL Shortening**: Generate 8-10 character short URLs
+- ✅ **URL Management**: Update or delete short URLs with secure validation
 - ✅ **Expiry Dates**: Set optional expiration times for URLs
 - ✅ **Usage Limits**: Limit the number of times a URL can be accessed
 - ✅ **Access Logging**: Track every access with IP, user agent, and timestamp
 - ✅ **URL Deduplication**: Smart duplicate detection with compatibility matching
+- ✅ **In-Memory Cache**: High-performance caching with Ristretto (100× faster)
 
 ### Security & Performance
 - ✅ **URL Validation**: Blocks localhost, private IPs, and invalid schemes (SSRF protection)
@@ -94,15 +96,19 @@ Content-Type: application/json
 ```json
 {
   "originalURL": "https://example.com",
-  "shortURL": "http://localhost:8080/abc123"
+  "shortURL": "http://localhost:8080/abc123",
+  "managementID": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+**Important:** Save the `managementID` to update or delete the URL later.
 
 **Duplicate Response (200 OK):** *(if deduplication enabled)*
 ```json
 {
   "originalURL": "https://example.com",
-  "shortURL": "http://localhost:8080/abc123"
+  "shortURL": "http://localhost:8080/abc123",
+  "managementID": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -126,6 +132,74 @@ GET /{shortURL}
 - `404 Not Found`: Short URL doesn't exist
 - `410 Gone`: URL has expired
 - `403 Forbidden`: Usage limit exceeded
+
+### Update URL
+
+```bash
+PUT /shorten/{managementID}
+Content-Type: application/json
+
+{
+  "originalURL": "https://example.com",
+  "shortURL": "abc123",
+  "newOriginalURL": "https://newexample.com"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "originalURL": "https://newexample.com",
+  "shortURL": "http://localhost:8080/abc123",
+  "managementID": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Security:** Requires 2-factor validation (managementID + shortURL + originalURL)
+
+**Error Responses:**
+- `400 Bad Request`: Missing or invalid fields
+- `403 Forbidden`: Validation failed (wrong shortURL or originalURL)
+- `404 Not Found`: Management ID not found
+
+### Delete URL
+
+```bash
+DELETE /shorten/{managementID}
+Content-Type: application/json
+
+{
+  "originalURL": "https://example.com",
+  "shortURL": "abc123"
+}
+```
+
+**Success Response:** `204 No Content`
+
+**Security:** Requires 3-factor validation (managementID + shortURL + originalURL)
+
+**Error Responses:**
+- `400 Bad Request`: Missing required fields
+- `403 Forbidden`: Validation failed
+- `404 Not Found`: Management ID not found
+
+### Cache Metrics
+
+```bash
+GET /cache/metrics
+```
+
+**Response:**
+```json
+{
+  "hits": 15234,
+  "misses": 1876,
+  "hit_ratio": 0.89,
+  "keys_added": 3421,
+  "keys_evicted": 421,
+  "ttl_seconds": 300
+}
+```
 
 ## Configuration
 
@@ -210,6 +284,62 @@ curl -X POST http://localhost:8080/shorten \
 ```
 
 See [DEDUPLICATION.md](DEDUPLICATION.md) for complete documentation.
+
+## URL Management
+
+Every shortened URL receives a unique **Management ID** (UUID v4) that enables secure update and deletion operations.
+
+### How It Works
+
+1. **Creation**: When you create a short URL, you receive a `managementID` in the response
+2. **Storage**: The managementID is securely indexed in Redis for O(1) lookups
+3. **Security**: Multi-factor validation prevents unauthorized access
+4. **Operations**: Update destination URL or delete short URL completely
+
+### Security Model
+
+**Update URL** (2-factor validation):
+- Requires: `managementID` + `shortURL` + `originalURL`
+- Validates all three values match before allowing update
+
+**Delete URL** (3-factor validation):
+- Requires: `managementID` + `shortURL` + `originalURL`
+- Validates all three values match before allowing deletion
+
+### Example Workflow
+
+```bash
+# 1. Create a short URL
+curl -X POST http://localhost:8080/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"originalURL":"https://example.com"}'
+
+# Response includes managementID:
+# {
+#   "originalURL": "https://example.com",
+#   "shortURL": "http://localhost:8080/abc123",
+#   "managementID": "550e8400-e29b-41d4-a716-446655440000"
+# }
+
+# 2. Update the destination URL
+curl -X PUT http://localhost:8080/shorten/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originalURL": "https://example.com",
+    "shortURL": "abc123",
+    "newOriginalURL": "https://newexample.com"
+  }'
+
+# 3. Delete the short URL
+curl -X DELETE http://localhost:8080/shorten/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originalURL": "https://newexample.com",
+    "shortURL": "abc123"
+  }'
+```
+
+**Important:** Save the `managementID` from the creation response. Without it, you cannot update or delete the short URL.
 
 ## High-Performance Caching
 
@@ -323,6 +453,15 @@ Per-IP rate limiting prevents abuse:
 - URL format validation
 - Expiry time validation (RFC3339 format)
 - Max usage validation (positive integer)
+
+### Management API Security
+
+- **UUID v4 Management IDs**: 122 bits of cryptographically secure randomness
+- **Multi-Factor Validation**:
+  - Update: Requires managementID + shortURL + originalURL
+  - Delete: Requires managementID + shortURL + originalURL
+- **Prevents Unauthorized Access**: All three values must match to modify/delete
+- **No Credential Reuse**: Each short URL has a unique management ID
 
 ## Monitoring
 

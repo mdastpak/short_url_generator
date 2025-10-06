@@ -15,6 +15,7 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 - `model/`: Data models for `URL` and `URLLog` structs
 - `handler/`: HTTP handlers using dependency injection pattern
   - `handler.go`: Main URLHandler struct with CreateShortURL, RedirectURL, HealthCheck, and CacheMetrics methods
+  - `management.go`: UpdateURL and DeleteURL handlers with multi-factor security validation
   - `response.go`: Standardized JSON response helpers
 - `cache/`: Ristretto-based in-memory cache with TTL and metrics
 - `redis/`: Redis client initialization with connection pooling
@@ -33,6 +34,7 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 
 - **Active URLs**: Stored as JSON-marshaled `URL` structs using short URL as key
 - **URL Index**: Hash `url_index` storing `SHA256(originalURL)` → `shortURL` for deduplication
+- **Management Index**: Hash `management_index` storing `managementID` (UUID) → `shortURL` for secure updates/deletes
 - **Expired URLs**: Moved to `expired_urls` list when accessed after expiry
 - **Used-up URLs**: Moved to `usedup_urls` list when usage limit exceeded
 - **Access Logs**: Stored in `logs:{shortURL}` lists as JSON-marshaled `URLLog` entries
@@ -43,6 +45,21 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 - Cryptographically secure random generation (handler/handler.go:52-58)
 - Collision detection with max 5 retries (handler/handler.go:61-89)
 - URL validation blocks: localhost, private IPs (10.x, 192.168.x, 172.16-31.x), link-local IPs, non-HTTP(S) schemes
+
+### URL Management System
+
+Every shortened URL receives a unique **ManagementID** (UUID v4) upon creation, enabling secure update and deletion operations:
+
+- **ManagementID**: Returned in the creation response's `managementID` field
+- **Purpose**: Allows URL owners to update the destination or delete the short URL
+- **Security**: Multi-factor validation prevents unauthorized access
+  - Update requires: managementID + shortURL + originalURL
+  - Delete requires: managementID + shortURL + originalURL
+- **Storage**: Indexed in Redis hash `management_index` for O(1) lookup
+- **Format**: UUID v4 (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+- **Entropy**: 122 bits of cryptographically secure randomness
+
+**Important**: Save the managementID from the creation response to manage your short URLs later. Without it, URLs cannot be updated or deleted.
 
 ### URL Deduplication
 
@@ -93,6 +110,23 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 4. **Cache Metrics** (`GET /cache/metrics`):
    - Return cache performance metrics (hits, misses, hit ratio, evictions)
    - Returns 503 if cache is disabled
+
+5. **Update URL** (`PUT /shorten/{managementID}`):
+   - Validate request body (requires originalURL, shortURL, newOriginalURL)
+   - Lookup shortURL from management index
+   - Verify shortURL and originalURL match (2-factor validation)
+   - Update originalURL in Redis
+   - Update deduplication index
+   - Invalidate cache
+   - Returns 200 OK with updated data, 403 for validation failures, 404 if not found
+
+6. **Delete URL** (`DELETE /shorten/{managementID}`):
+   - Validate request body (requires originalURL and shortURL)
+   - Lookup shortURL from management index
+   - Verify shortURL and originalURL match (3-factor validation: managementID + shortURL + originalURL)
+   - Delete from Redis, management index, and deduplication index
+   - Invalidate cache
+   - Returns 204 No Content, 403 for validation failures, 404 if not found
 
 ### Middleware Chain (Applied in Order)
 
@@ -161,12 +195,36 @@ Access short URL:
 curl -L http://localhost:8080/{shortURL}
 ```
 
+Update URL (requires managementID from creation response):
+```sh
+curl -X PUT http://localhost:8080/shorten/{managementID} \
+  -H "Content-Type: application/json" \
+  -d '{"originalURL":"https://example.com", "shortURL":"abc123", "newOriginalURL":"https://newexample.com"}'
+```
+
+Delete URL (requires managementID, shortURL, and originalURL for security):
+```sh
+curl -X DELETE http://localhost:8080/shorten/{managementID} \
+  -H "Content-Type: application/json" \
+  -d '{"originalURL":"https://example.com", "shortURL":"abc123"}'
+```
+
+Cache metrics:
+```sh
+curl http://localhost:8080/cache/metrics
+```
+
 ## Key Implementation Details
 
 ### Security
 - URL validation prevents SSRF attacks (utils/validator.go)
 - Rate limiting prevents abuse (middleware/ratelimit.go)
 - All Redis operations have timeouts to prevent hanging
+- Management API uses multi-factor validation:
+  - Update: Requires managementID + shortURL + originalURL (2-factor)
+  - Delete: Requires managementID + shortURL + originalURL (3-factor)
+  - UUID v4 managementIDs (cryptographically random, 122 bits entropy)
+  - Prevents unauthorized modifications without all required credentials
 
 ### Error Handling
 - Standardized JSON error responses across all endpoints
