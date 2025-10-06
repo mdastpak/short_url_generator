@@ -512,10 +512,9 @@ Use for:
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)**: Architecture and development guide
-- **[DEDUPLICATION.md](DEDUPLICATION.md)**: URL deduplication feature
-- **[IMPROVEMENTS.md](IMPROVEMENTS.md)**: List of all improvements made
-- **[DEDUPLICATION_SUMMARY.md](DEDUPLICATION_SUMMARY.md)**: Deduplication implementation details
+- **[CLAUDE.md](CLAUDE.md)**: Architecture and development guide for Claude Code
+- **[DEDUPLICATION.md](DEDUPLICATION.md)**: URL deduplication feature documentation
+- **[README.md](README.md)**: This file - Complete user guide and API reference
 
 ## Contributing
 
