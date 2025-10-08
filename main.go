@@ -16,6 +16,7 @@ import (
 	appLogger "short-url-generator/logger"
 	"short-url-generator/middleware"
 	redisClient "short-url-generator/redis"
+	"short-url-generator/security"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
@@ -70,17 +71,31 @@ func main() {
 		log.Info().Msg("Cache disabled in configuration")
 	}
 
+	// Initialize URL scanner for malware/phishing detection
+	urlScanner := security.NewURLScanner(
+		cfg.Security.SafeBrowsingAPIKey,
+		cfg.Security.BlocklistEnabled,
+	)
+	log.Info().
+		Bool("url_scanning_enabled", cfg.Security.URLScanningEnabled).
+		Bool("blocklist_enabled", cfg.Security.BlocklistEnabled).
+		Bool("safe_browsing_enabled", cfg.Security.SafeBrowsingAPIKey != "").
+		Msg("URL security scanner initialized")
+
 	// Create handler with dependency injection
-	urlHandler := handler.NewURLHandler(rdb, cacheClient, cfg)
+	urlHandler := handler.NewURLHandler(rdb, cacheClient, cfg, urlScanner)
 
 	// Set up router
 	r := mux.NewRouter()
 
 	// Apply global middleware
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit.RequestsPerSecond, cfg.RateLimit.Burst)
+	botProtection := middleware.NewBotProtection(cfg.Security.BotMaxRequestsPerMinute, cfg.Security.BotDetectionEnabled)
+
 	r.Use(middleware.CORS)
 	r.Use(middleware.RequestLogger)
 	r.Use(rateLimiter.Limit)
+	r.Use(botProtection.Protect) // Bot detection middleware
 
 	// Register routes
 	r.HandleFunc("/health", urlHandler.HealthCheck).Methods("GET")

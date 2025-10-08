@@ -11,6 +11,7 @@ import (
 	"short-url-generator/cache"
 	"short-url-generator/config"
 	"short-url-generator/model"
+	"short-url-generator/security"
 	"short-url-generator/utils"
 	"strings"
 	"time"
@@ -36,22 +37,24 @@ var (
 
 // URLHandler handles URL shortening operations
 type URLHandler struct {
-	redis   *redis.Client
-	cache   *cache.Cache
-	config  config.Config
-	baseURL string
+	redis      *redis.Client
+	cache      *cache.Cache
+	config     config.Config
+	baseURL    string
+	urlScanner *security.URLScanner
 }
 
 // NewURLHandler creates a new URL handler
-func NewURLHandler(redisClient *redis.Client, cacheClient *cache.Cache, cfg config.Config) *URLHandler {
+func NewURLHandler(redisClient *redis.Client, cacheClient *cache.Cache, cfg config.Config, scanner *security.URLScanner) *URLHandler {
 	// Use configured base_url if provided, otherwise construct from scheme, IP, and port
 	baseURL := cfg.WebServer.BaseURL
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("%s://%s:%s", cfg.WebServer.Scheme, cfg.WebServer.IP, cfg.WebServer.Port)
 	}
 	return &URLHandler{
-		redis:   redisClient,
-		cache:   cacheClient,
+		redis:      redisClient,
+		cache:      cacheClient,
+		urlScanner: scanner,
 		config:  cfg,
 		baseURL: baseURL,
 	}
@@ -198,6 +201,26 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Str("url", input.OriginalURL).Msg("Invalid URL")
 		SendJSONError(w, http.StatusBadRequest, err, "")
 		return
+	}
+
+	// Scan URL for malware/phishing if scanner is available
+	if h.urlScanner != nil && h.config.Security.URLScanningEnabled {
+		scanResult, err := h.urlScanner.ScanURL(ctx, input.OriginalURL)
+		if err != nil {
+			log.Error().Err(err).Str("url", input.OriginalURL).Msg("URL scanning failed")
+			// Don't fail the request if scanning fails, just log it
+		} else if !scanResult.Safe {
+			log.Warn().
+				Str("url", input.OriginalURL).
+				Interface("threats", scanResult.Threats).
+				Str("source", scanResult.Source).
+				Msg("Malicious URL detected")
+
+			SendJSONError(w, http.StatusForbidden,
+				errors.New("URL flagged as potentially malicious"),
+				fmt.Sprintf("This URL has been flagged for: %v. Source: %s", scanResult.Threats, scanResult.Source))
+			return
+		}
 	}
 
 	// Validate custom slug if provided and feature is enabled

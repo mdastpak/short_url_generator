@@ -48,12 +48,21 @@ type FeaturesConfig struct {
 	PreviewAutoRedirect   int  `mapstructure:"preview_auto_redirect"`     // Auto-redirect seconds (0 = disabled)
 }
 
+type SecurityConfig struct {
+	URLScanningEnabled      bool   `mapstructure:"url_scanning_enabled"`       // Enable URL malware/phishing scanning
+	BlocklistEnabled        bool   `mapstructure:"blocklist_enabled"`          // Enable local blocklist
+	SafeBrowsingAPIKey      string `mapstructure:"safe_browsing_api_key"`      // Google Safe Browsing API key (optional)
+	BotDetectionEnabled     bool   `mapstructure:"bot_detection_enabled"`      // Enable bot detection
+	BotMaxRequestsPerMinute int    `mapstructure:"bot_max_requests_per_minute"` // Max requests per minute before flagging as bot
+}
+
 type Config struct {
 	WebServer WebServerConfig `mapstructure:"webserver"`
 	Redis     RedisConfig     `mapstructure:"redis"`
 	Cache     CacheConfig     `mapstructure:"cache"`
 	RateLimit RateLimitConfig `mapstructure:"ratelimit"`
 	Features  FeaturesConfig  `mapstructure:"features"`
+	Security  SecurityConfig  `mapstructure:"security"`
 }
 
 func LoadConfig() (Config, error) {
@@ -129,4 +138,11 @@ func setDefaults() {
 	viper.SetDefault("features.slug_suggestions_count", 3)
 	viper.SetDefault("features.preview_enabled", true)
 	viper.SetDefault("features.preview_auto_redirect", 0) // 0 = disabled, >0 = seconds
+
+	// Security defaults
+	viper.SetDefault("security.url_scanning_enabled", true)
+	viper.SetDefault("security.blocklist_enabled", true)
+	viper.SetDefault("security.safe_browsing_api_key", "")       // Optional, leave empty to use blocklist only
+	viper.SetDefault("security.bot_detection_enabled", true)
+	viper.SetDefault("security.bot_max_requests_per_minute", 60) // 60 req/min per IP
 }

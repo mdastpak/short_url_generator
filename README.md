@@ -18,6 +18,8 @@ A production-ready URL shortening service built with Go, featuring Redis persist
 
 ### Security & Performance
 - ✅ **URL Validation**: Blocks localhost, private IPs, and invalid schemes (SSRF protection)
+- ✅ **Malware/Phishing Detection**: URL scanning with Google Safe Browsing API + local blocklist
+- ✅ **Bot Detection**: Intelligent bot detection with user-agent analysis and rate patterns
 - ✅ **Rate Limiting**: Per-IP rate limiting (configurable)
 - ✅ **CORS Support**: Cross-origin requests enabled
 - ✅ **Collision Detection**: Retry mechanism for short URL generation
@@ -427,6 +429,13 @@ features:
   require_auth_for_custom: false  # Future: require auth for custom slugs
   preview_enabled: true           # Enable URL preview feature (anti-phishing)
   preview_auto_redirect: 0        # Auto-redirect seconds on preview page (0 = disabled)
+
+security:
+  url_scanning_enabled: true             # Enable malware/phishing URL scanning
+  blocklist_enabled: true                # Enable local blocklist
+  safe_browsing_api_key: ""              # Google Safe Browsing API key (optional)
+  bot_detection_enabled: true            # Enable bot detection
+  bot_max_requests_per_minute: 60        # Max requests per IP before flagging as bot
 ```
 
 ### Environment Variables
@@ -578,6 +587,123 @@ cache:
 - Very low traffic (< 10 req/s)
 - Strict consistency requirements
 - Memory-constrained environments
+
+## Security Features
+
+### Malware & Phishing Detection
+
+The service includes comprehensive URL scanning to protect users from malicious links.
+
+**Two-Layer Protection:**
+
+1. **Local Blocklist** (No API key required)
+   - Fast, immediate blocking of known malicious patterns
+   - Blocks common phishing keywords and suspicious TLDs
+   - Blocks malware file extensions
+   - Customizable blocklist
+
+2. **Google Safe Browsing API** (Optional)
+   - Real-time threat intelligence from Google
+   - Detects malware, phishing, unwanted software
+   - Requires free API key from Google Cloud Console
+
+**Configuration:**
+```yaml
+security:
+  url_scanning_enabled: true           # Enable URL scanning
+  blocklist_enabled: true              # Enable local blocklist
+  safe_browsing_api_key: "YOUR_API_KEY" # Optional: Google Safe Browsing API
+```
+
+**How it works:**
+1. When a URL is submitted, it's checked against the local blocklist first
+2. If Safe Browsing API is configured, URL is checked against Google's threat database
+3. If threats are detected, the URL is rejected with details about the threat
+
+**Example blocked patterns:**
+- Phishing keywords: `account-verify`, `confirm-account`, `suspended-account`
+- Malware extensions: `.exe?`, `.scr?`, `.bat?`
+- Suspicious TLDs: `.tk`, `.ml`, `.ga`
+
+**Get your Safe Browsing API key:**
+```bash
+# 1. Visit: https://console.cloud.google.com
+# 2. Enable "Safe Browsing API"
+# 3. Create API credentials
+# 4. Set in config or environment variable
+export SHORTURL_SECURITY_SAFE_BROWSING_API_KEY="your-api-key"
+```
+
+### Bot Detection
+
+Intelligent bot detection prevents automated abuse and scraping.
+
+**Detection Methods:**
+1. **User-Agent Analysis**
+   - Identifies known bot patterns (scrapers, crawlers)
+   - Allows legitimate bots (Googlebot, social media crawlers)
+   - Flags suspicious or missing user agents
+
+2. **Rate-Based Detection**
+   - Tracks requests per IP address
+   - Flags IPs exceeding threshold (default: 60 req/min)
+   - Auto-cleanup of old tracking data
+
+3. **Behavior Patterns**
+   - Detects automated tools (curl, wget, python-requests)
+   - Identifies missing browser fingerprints
+
+**Configuration:**
+```yaml
+security:
+  bot_detection_enabled: true
+  bot_max_requests_per_minute: 60  # Requests per IP before flagging
+```
+
+**Legitimate bots (allowed):**
+- Search engines: Googlebot, Bingbot
+- Social media: Slackbot, Twitterbot, FacebookExternalHit
+- Messaging: WhatsApp, Telegram, Discord
+
+**Blocked patterns:**
+- Generic bots, scrapers, crawlers
+- Automated tools: curl, wget, python-requests
+- Suspicious user agents
+
+**Response when bot detected:**
+```json
+{
+  "error": "Bot detected",
+  "message": "This request appears to be automated. If you believe this is an error, please contact support.",
+  "reason": "excessive_request_rate"
+}
+```
+
+### Security Best Practices
+
+1. **Enable all security features:**
+   ```yaml
+   security:
+     url_scanning_enabled: true
+     blocklist_enabled: true
+     bot_detection_enabled: true
+   ```
+
+2. **Get Safe Browsing API key** for enhanced protection
+
+3. **Monitor security events** in logs:
+   ```bash
+   # Check for blocked URLs
+   grep "Malicious URL detected" logs/app.log
+
+   # Check for bot activity
+   grep "Bot detected" logs/app.log
+   ```
+
+4. **Customize blocklist** for your use case:
+   - Add industry-specific threats
+   - Block competitor domains (if needed)
+   - Add custom patterns
 
 ## Development
 

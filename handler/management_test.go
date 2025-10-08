@@ -19,7 +19,7 @@ func TestUpdateURL_MissingManagementID(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	reqBody := UpdateURLRequest{
 		OriginalURL:    "https://example.com",
@@ -42,7 +42,7 @@ func TestUpdateURL_InvalidJSON(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/shorten/test-id", bytes.NewBufferString("invalid json"))
 	req = mux.SetURLVars(req, map[string]string{"managementID": "test-id"})
@@ -59,7 +59,7 @@ func TestUpdateURL_MissingRequiredFields(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	testCases := []struct {
 		name  string
@@ -108,7 +108,7 @@ func TestUpdateURL_InvalidNewURL(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	reqBody := UpdateURLRequest{
 		OriginalURL:    "https://example.com",
@@ -132,7 +132,7 @@ func TestDeleteURL_MissingManagementID(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	reqBody := DeleteURLRequest{
 		OriginalURL: "https://example.com",
@@ -154,7 +154,7 @@ func TestDeleteURL_InvalidJSON(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/shorten/test-id", bytes.NewBufferString("invalid json"))
 	req = mux.SetURLVars(req, map[string]string{"managementID": "test-id"})
@@ -171,7 +171,7 @@ func TestDeleteURL_MissingRequiredFields(t *testing.T) {
 	cfg := &config.Config{
 		Redis: config.RedisConfig{OperationTimeout: 5},
 	}
-	handler := NewURLHandler(nil, nil, *cfg)
+	handler := NewURLHandler(nil, nil, *cfg, nil)
 
 	testCases := []struct {
 		name  string
@@ -224,7 +224,7 @@ func TestUpdateURL_Success(t *testing.T) {
 		Redis:    config.RedisConfig{OperationTimeout: 5},
 		Features: config.FeaturesConfig{DeduplicationEnabled: false},
 	}
-	handler := NewURLHandler(rdb, nil, *cfg)
+	handler := NewURLHandler(rdb, nil, *cfg, nil)
 
 	// Prepare test data
 	managementID := "test-mgmt-id-" + time.Now().Format("20060102150405")
@@ -293,7 +293,7 @@ func TestDeleteURL_Success(t *testing.T) {
 		Redis:    config.RedisConfig{OperationTimeout: 5},
 		Features: config.FeaturesConfig{DeduplicationEnabled: false},
 	}
-	handler := NewURLHandler(rdb, nil, *cfg)
+	handler := NewURLHandler(rdb, nil, *cfg, nil)
 
 	// Prepare test data
 	managementID := "test-mgmt-id-" + time.Now().Format("20060102150405")
