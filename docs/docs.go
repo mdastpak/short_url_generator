@@ -44,6 +44,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/security/stats": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns comprehensive security statistics including bot detections, blocked URLs, and rate limit violations",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get security statistics",
+                "responses": {
+                    "200": {
+                        "description": "Security statistics",
+                        "schema": {
+                            "$ref": "#/definitions/handler.SecurityStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -764,6 +801,86 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "urlsCreatedToday": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.IPBlockCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "ip": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ReasonCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SecurityStats": {
+            "type": "object",
+            "properties": {
+                "botDetectionEnabled": {
+                    "type": "boolean"
+                },
+                "botDetections": {
+                    "type": "integer"
+                },
+                "last24Hours": {
+                    "$ref": "#/definitions/handler.StatsLast24Hours"
+                },
+                "lastUpdated": {
+                    "type": "string"
+                },
+                "maliciousURLsBlocked": {
+                    "type": "integer"
+                },
+                "rateLimitViolations": {
+                    "type": "integer"
+                },
+                "securityEnabled": {
+                    "type": "boolean"
+                },
+                "topBlockReasons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.ReasonCount"
+                    }
+                },
+                "topBlockedIPs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.IPBlockCount"
+                    }
+                },
+                "totalSecurityBlocks": {
+                    "type": "integer"
+                },
+                "urlScanningEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handler.StatsLast24Hours": {
+            "type": "object",
+            "properties": {
+                "botDetections": {
+                    "type": "integer"
+                },
+                "maliciousURLsBlocked": {
+                    "type": "integer"
+                },
+                "rateLimitViolations": {
                     "type": "integer"
                 }
             }

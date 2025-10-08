@@ -126,6 +126,7 @@ func main() {
 	adminRouter.HandleFunc("/urls/{shortURL}", urlHandler.GetURLDetail).Methods("GET")
 	adminRouter.HandleFunc("/urls/bulk-delete", urlHandler.BulkDeleteURLs).Methods("POST")
 	adminRouter.HandleFunc("/system/health", urlHandler.GetSystemHealth).Methods("GET")
+	adminRouter.HandleFunc("/security/stats", urlHandler.GetSecurityStats).Methods("GET")
 
 	log.Info().
 		Bool("admin_enabled", cfg.Admin.Enabled).

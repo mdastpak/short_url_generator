@@ -21,6 +21,58 @@ definitions:
       urlsCreatedToday:
         type: integer
     type: object
+  handler.IPBlockCount:
+    properties:
+      count:
+        type: integer
+      ip:
+        type: string
+    type: object
+  handler.ReasonCount:
+    properties:
+      count:
+        type: integer
+      reason:
+        type: string
+    type: object
+  handler.SecurityStats:
+    properties:
+      botDetectionEnabled:
+        type: boolean
+      botDetections:
+        type: integer
+      last24Hours:
+        $ref: '#/definitions/handler.StatsLast24Hours'
+      lastUpdated:
+        type: string
+      maliciousURLsBlocked:
+        type: integer
+      rateLimitViolations:
+        type: integer
+      securityEnabled:
+        type: boolean
+      topBlockReasons:
+        items:
+          $ref: '#/definitions/handler.ReasonCount'
+        type: array
+      topBlockedIPs:
+        items:
+          $ref: '#/definitions/handler.IPBlockCount'
+        type: array
+      totalSecurityBlocks:
+        type: integer
+      urlScanningEnabled:
+        type: boolean
+    type: object
+  handler.StatsLast24Hours:
+    properties:
+      botDetections:
+        type: integer
+      maliciousURLsBlocked:
+        type: integer
+      rateLimitViolations:
+        type: integer
+    type: object
   handler.URLDetailResponse:
     properties:
       accessLogs:
@@ -327,6 +379,30 @@ paths:
           schema:
             type: string
       summary: Serve admin dashboard UI
+      tags:
+      - Admin
+  /admin/security/stats:
+    get:
+      description: Returns comprehensive security statistics including bot detections,
+        blocked URLs, and rate limit violations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Security statistics
+          schema:
+            $ref: '#/definitions/handler.SecurityStats'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get security statistics
       tags:
       - Admin
   /admin/stats:

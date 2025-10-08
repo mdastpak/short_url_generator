@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -68,6 +69,40 @@ type SecurityBlock struct {
 	UserAgent string    `json:"userAgent,omitempty"`
 	Reason    string    `json:"reason"`
 	Timestamp time.Time `json:"timestamp"`
+}
+
+// SecurityStats represents security statistics
+type SecurityStats struct {
+	BotDetections          int64     `json:"botDetections"`
+	MaliciousURLsBlocked   int64     `json:"maliciousURLsBlocked"`
+	RateLimitViolations    int64     `json:"rateLimitViolations"`
+	TotalSecurityBlocks    int64     `json:"totalSecurityBlocks"`
+	Last24Hours            StatsLast24Hours `json:"last24Hours"`
+	TopBlockedIPs          []IPBlockCount `json:"topBlockedIPs"`
+	TopBlockReasons        []ReasonCount `json:"topBlockReasons"`
+	SecurityEnabled        bool      `json:"securityEnabled"`
+	URLScanningEnabled     bool      `json:"urlScanningEnabled"`
+	BotDetectionEnabled    bool      `json:"botDetectionEnabled"`
+	LastUpdated            time.Time `json:"lastUpdated"`
+}
+
+// StatsLast24Hours represents statistics for the last 24 hours
+type StatsLast24Hours struct {
+	BotDetections        int64 `json:"botDetections"`
+	MaliciousURLsBlocked int64 `json:"maliciousURLsBlocked"`
+	RateLimitViolations  int64 `json:"rateLimitViolations"`
+}
+
+// IPBlockCount represents blocked count per IP
+type IPBlockCount struct {
+	IP    string `json:"ip"`
+	Count int64  `json:"count"`
+}
+
+// ReasonCount represents block count per reason
+type ReasonCount struct {
+	Reason string `json:"reason"`
+	Count  int64  `json:"count"`
 }
 
 // GetAdminStats handles GET /admin/stats
@@ -553,4 +588,112 @@ func (h *URLHandler) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(health)
+}
+
+// GetSecurityStats handles GET /admin/security/stats
+// @Summary Get security statistics
+// @Description Returns comprehensive security statistics including bot detections, blocked URLs, and rate limit violations
+// @Tags Admin
+// @Security ApiKeyAuth
+// @Produce json
+// @Success 200 {object} SecurityStats "Security statistics"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /admin/security/stats [get]
+func (h *URLHandler) GetSecurityStats(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.config.Redis.OperationTimeout)*time.Second)
+	defer cancel()
+
+	stats := SecurityStats{
+		SecurityEnabled:     h.config.Security.URLScanningEnabled || h.config.Security.BotDetectionEnabled,
+		URLScanningEnabled:  h.config.Security.URLScanningEnabled,
+		BotDetectionEnabled: h.config.Security.BotDetectionEnabled,
+		LastUpdated:         time.Now(),
+	}
+
+	// Get bot detection count
+	botCount, err := h.redis.Get(ctx, "security:bot_detections").Int64()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get bot detection count")
+	}
+	stats.BotDetections = botCount
+
+	// Get malicious URLs blocked count
+	maliciousCount, err := h.redis.Get(ctx, "security:malicious_urls").Int64()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get malicious URLs count")
+	}
+	stats.MaliciousURLsBlocked = maliciousCount
+
+	// Get rate limit violations count
+	rateLimitCount, err := h.redis.Get(ctx, "security:rate_limit_violations").Int64()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get rate limit violations count")
+	}
+	stats.RateLimitViolations = rateLimitCount
+
+	// Calculate total
+	stats.TotalSecurityBlocks = stats.BotDetections + stats.MaliciousURLsBlocked + stats.RateLimitViolations
+
+	// Get last 24 hours statistics
+	now := time.Now()
+	yesterday := now.Add(-24 * time.Hour).Unix()
+
+	// Bot detections in last 24 hours
+	botLast24h, err := h.redis.ZCount(ctx, "security:bot_detections_timeline", fmt.Sprintf("%d", yesterday), "+inf").Result()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get bot detections last 24h")
+	}
+	stats.Last24Hours.BotDetections = botLast24h
+
+	// Malicious URLs in last 24 hours
+	maliciousLast24h, err := h.redis.ZCount(ctx, "security:malicious_urls_timeline", fmt.Sprintf("%d", yesterday), "+inf").Result()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get malicious URLs last 24h")
+	}
+	stats.Last24Hours.MaliciousURLsBlocked = maliciousLast24h
+
+	// Rate limit violations in last 24 hours
+	rateLimitLast24h, err := h.redis.ZCount(ctx, "security:rate_limit_timeline", fmt.Sprintf("%d", yesterday), "+inf").Result()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get rate limit violations last 24h")
+	}
+	stats.Last24Hours.RateLimitViolations = rateLimitLast24h
+
+	// Get top blocked IPs (from sorted set)
+	topIPs, err := h.redis.ZRevRangeWithScores(ctx, "security:blocked_ips", 0, 9).Result()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get top blocked IPs")
+	}
+	for _, z := range topIPs {
+		if ip, ok := z.Member.(string); ok {
+			stats.TopBlockedIPs = append(stats.TopBlockedIPs, IPBlockCount{
+				IP:    ip,
+				Count: int64(z.Score),
+			})
+		}
+	}
+
+	// Get top block reasons (from sorted set)
+	topReasons, err := h.redis.ZRevRangeWithScores(ctx, "security:block_reasons", 0, 9).Result()
+	if err != nil && err != redis.Nil {
+		log.Error().Err(err).Msg("Failed to get top block reasons")
+	}
+	for _, z := range topReasons {
+		if reason, ok := z.Member.(string); ok {
+			stats.TopBlockReasons = append(stats.TopBlockReasons, ReasonCount{
+				Reason: reason,
+				Count:  int64(z.Score),
+			})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+
+	log.Info().
+		Int64("bot_detections", stats.BotDetections).
+		Int64("malicious_urls", stats.MaliciousURLsBlocked).
+		Int64("rate_limit_violations", stats.RateLimitViolations).
+		Msg("Security stats retrieved")
 }

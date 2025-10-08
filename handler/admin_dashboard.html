@@ -384,6 +384,7 @@
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('overview')">Overview</div>
                 <div class="tab" onclick="switchTab('urls')">URL Manager</div>
+                <div class="tab" onclick="switchTab('security')">Security</div>
                 <div class="tab" onclick="switchTab('health')">System Health</div>
             </div>
 
@@ -435,6 +436,73 @@
                 </div>
                 <div id="urlsList">
                     <div class="loading">Loading URLs...</div>
+                </div>
+            </div>
+
+            <div id="securityTab" class="content" style="display: none;">
+                <h2 style="margin-bottom: 20px; color: #2d3748;">Security Statistics</h2>
+
+                <!-- Overall Security Stats -->
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <h3>Bot Detections</h3>
+                        <div class="value" id="secTotalBots">-</div>
+                        <div class="subtext" id="secBotsLast24h">Last 24h: -</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Malicious URLs Blocked</h3>
+                        <div class="value" id="secMaliciousURLs">-</div>
+                        <div class="subtext" id="secMaliciousLast24h">Last 24h: -</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Rate Limit Violations</h3>
+                        <div class="value" id="secRateLimits">-</div>
+                        <div class="subtext" id="secRateLimitLast24h">Last 24h: -</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Security Blocks</h3>
+                        <div class="value" id="secTotalBlocks">-</div>
+                        <div class="subtext">All time</div>
+                    </div>
+                </div>
+
+                <!-- Two Column Layout -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <!-- Top Blocked IPs -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="color: #2d3748; margin-bottom: 15px;">Top Blocked IPs</h3>
+                        <div id="topBlockedIPs">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Top Block Reasons -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="color: #2d3748; margin-bottom: 15px;">Top Block Reasons</h3>
+                        <div id="topBlockReasons">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Configuration -->
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">Security Configuration</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div>
+                            <p style="font-size: 14px; color: #4a5568;"><strong>Security Enabled:</strong></p>
+                            <p style="font-size: 14px; color: #2d3748; margin-top: 5px;" id="secEnabled">-</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 14px; color: #4a5568;"><strong>URL Scanning:</strong></p>
+                            <p style="font-size: 14px; color: #2d3748; margin-top: 5px;" id="secURLScanning">-</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 14px; color: #4a5568;"><strong>Bot Detection:</strong></p>
+                            <p style="font-size: 14px; color: #2d3748; margin-top: 5px;" id="secBotDetection">-</p>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #718096; margin-top: 15px;">Last Updated: <span id="secLastUpdated">-</span></p>
                 </div>
             </div>
 
@@ -582,11 +650,13 @@
             // Show/hide content
             document.getElementById('overviewTab').style.display = tab === 'overview' ? 'block' : 'none';
             document.getElementById('urlsTab').style.display = tab === 'urls' ? 'block' : 'none';
+            document.getElementById('securityTab').style.display = tab === 'security' ? 'block' : 'none';
             document.getElementById('healthTab').style.display = tab === 'health' ? 'block' : 'none';
 
             // Load data for tab
             if (tab === 'overview') loadOverview();
             if (tab === 'urls') loadURLs();
+            if (tab === 'security') loadSecurityStats();
             if (tab === 'health') loadHealth();
         }
 
@@ -766,6 +836,86 @@
             } catch (error) {
                 console.error('Failed to load health:', error);
                 healthData.innerHTML = '<div class="empty">Failed to load system health</div>';
+            }
+        }
+
+        async function loadSecurityStats() {
+            try {
+                const response = await fetch('/admin/security/stats', {
+                    headers: { 'X-Admin-Key': apiKey }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        logout();
+                        return;
+                    }
+                    throw new Error('Failed to load security stats');
+                }
+
+                const stats = await response.json();
+
+                // Update main stats
+                document.getElementById('secTotalBots').textContent = stats.botDetections || 0;
+                document.getElementById('secMaliciousURLs').textContent = stats.maliciousURLsBlocked || 0;
+                document.getElementById('secRateLimits').textContent = stats.rateLimitViolations || 0;
+                document.getElementById('secTotalBlocks').textContent = stats.totalSecurityBlocks || 0;
+
+                // Update last 24h stats
+                document.getElementById('secBotsLast24h').textContent = `Last 24h: ${stats.last24Hours.botDetections || 0}`;
+                document.getElementById('secMaliciousLast24h').textContent = `Last 24h: ${stats.last24Hours.maliciousURLsBlocked || 0}`;
+                document.getElementById('secRateLimitLast24h').textContent = `Last 24h: ${stats.last24Hours.rateLimitViolations || 0}`;
+
+                // Top Blocked IPs
+                const topIPsDiv = document.getElementById('topBlockedIPs');
+                if (stats.topBlockedIPs && stats.topBlockedIPs.length > 0) {
+                    let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                    html += '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<thead><tr style="background: #f7fafc;"><th style="padding: 8px; text-align: left; font-size: 13px;">IP Address</th><th style="padding: 8px; text-align: right; font-size: 13px;">Count</th></tr></thead>';
+                    html += '<tbody>';
+                    stats.topBlockedIPs.forEach((item, index) => {
+                        html += `<tr style="border-bottom: 1px solid #e2e8f0;">`;
+                        html += `<td style="padding: 8px; font-size: 13px; font-family: monospace;">${item.ip}</td>`;
+                        html += `<td style="padding: 8px; text-align: right; font-size: 13px; font-weight: bold; color: #e53e3e;">${item.count}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                    topIPsDiv.innerHTML = html;
+                } else {
+                    topIPsDiv.innerHTML = '<p style="color: #a0aec0; font-size: 14px;">No blocked IPs yet</p>';
+                }
+
+                // Top Block Reasons
+                const topReasonsDiv = document.getElementById('topBlockReasons');
+                if (stats.topBlockReasons && stats.topBlockReasons.length > 0) {
+                    let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                    html += '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<thead><tr style="background: #f7fafc;"><th style="padding: 8px; text-align: left; font-size: 13px;">Reason</th><th style="padding: 8px; text-align: right; font-size: 13px;">Count</th></tr></thead>';
+                    html += '<tbody>';
+                    stats.topBlockReasons.forEach((item, index) => {
+                        html += `<tr style="border-bottom: 1px solid #e2e8f0;">`;
+                        html += `<td style="padding: 8px; font-size: 13px;">${item.reason}</td>`;
+                        html += `<td style="padding: 8px; text-align: right; font-size: 13px; font-weight: bold; color: #e53e3e;">${item.count}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                    topReasonsDiv.innerHTML = html;
+                } else {
+                    topReasonsDiv.innerHTML = '<p style="color: #a0aec0; font-size: 14px;">No block reasons yet</p>';
+                }
+
+                // Security Configuration
+                document.getElementById('secEnabled').textContent = stats.securityEnabled ? '✅ Enabled' : '❌ Disabled';
+                document.getElementById('secURLScanning').textContent = stats.urlScanningEnabled ? '✅ Enabled' : '❌ Disabled';
+                document.getElementById('secBotDetection').textContent = stats.botDetectionEnabled ? '✅ Enabled' : '❌ Disabled';
+                document.getElementById('secLastUpdated').textContent = new Date(stats.lastUpdated).toLocaleString();
+
+            } catch (error) {
+                console.error('Failed to load security stats:', error);
+                document.getElementById('secTotalBots').textContent = 'Error';
+                document.getElementById('secMaliciousURLs').textContent = 'Error';
+                document.getElementById('secRateLimits').textContent = 'Error';
+                document.getElementById('secTotalBlocks').textContent = 'Error';
             }
         }
 
