@@ -362,8 +362,15 @@
         <div class="login-box">
             <h2>🔐 Admin Login</h2>
             <div id="loginError" class="error-message" style="display: none;"></div>
-            <input type="password" id="apiKeyInput" placeholder="Enter Admin API Key" />
+            <input type="password" id="apiKeyInput" placeholder="Enter Admin API Key" onkeypress="if(event.key==='Enter') login()" />
+            <div style="display: flex; align-items: center; margin: 15px 0; gap: 8px;">
+                <input type="checkbox" id="rememberMe" style="width: auto; margin: 0; cursor: pointer;">
+                <label for="rememberMe" style="margin: 0; cursor: pointer; font-size: 14px; color: #4a5568;">Remember me (stay logged in)</label>
+            </div>
             <button onclick="login()">Login</button>
+            <p style="margin-top: 15px; font-size: 12px; color: #718096; text-align: center;">
+                Session expires after 60 minutes of inactivity
+            </p>
         </div>
     </div>
 
@@ -445,10 +452,46 @@
         let searchQuery = '';
         let statusFilter = 'all';
 
-        // Check for existing API key in localStorage
+        // Configuration
+        const AUTH_CONFIG = {
+            // Storage type: 'localStorage' (persistent), 'sessionStorage' (until browser close), or 'none' (no storage)
+            storageType: 'sessionStorage',
+
+            // Session timeout in minutes (0 = no timeout)
+            // Only applies when using localStorage or sessionStorage
+            sessionTimeout: 60,
+
+            // Key names
+            keyName: 'adminApiKey',
+            timestampName: 'adminApiKeyTimestamp'
+        };
+
+        // Check for existing API key and validate session
         window.onload = function() {
-            const savedKey = localStorage.getItem('adminApiKey');
+            if (AUTH_CONFIG.storageType === 'none') {
+                return; // No auto-login
+            }
+
+            const storage = AUTH_CONFIG.storageType === 'localStorage' ? localStorage : sessionStorage;
+            const savedKey = storage.getItem(AUTH_CONFIG.keyName);
+            const savedTimestamp = storage.getItem(AUTH_CONFIG.timestampName);
+
             if (savedKey) {
+                // Check if session has expired
+                if (AUTH_CONFIG.sessionTimeout > 0 && savedTimestamp) {
+                    const now = Date.now();
+                    const elapsed = (now - parseInt(savedTimestamp)) / 1000 / 60; // minutes
+
+                    if (elapsed > AUTH_CONFIG.sessionTimeout) {
+                        // Session expired
+                        storage.removeItem(AUTH_CONFIG.keyName);
+                        storage.removeItem(AUTH_CONFIG.timestampName);
+                        console.log('Session expired after', elapsed.toFixed(1), 'minutes');
+                        return;
+                    }
+                }
+
+                // Valid session - auto login
                 apiKey = savedKey;
                 showDashboard();
             }
@@ -456,6 +499,8 @@
 
         async function login() {
             const key = document.getElementById('apiKeyInput').value.trim();
+            const rememberMe = document.getElementById('rememberMe').checked;
+
             if (!key) {
                 showLoginError('Please enter an API key');
                 return;
@@ -470,7 +515,27 @@
 
             if (response.ok) {
                 apiKey = key;
-                localStorage.setItem('adminApiKey', key);
+
+                // Save based on storage configuration and "Remember Me" checkbox
+                if (AUTH_CONFIG.storageType !== 'none') {
+                    let storage;
+
+                    // If "Remember Me" is checked, use localStorage regardless of config
+                    // Otherwise use configured storage type
+                    if (rememberMe) {
+                        storage = localStorage;
+                    } else {
+                        storage = AUTH_CONFIG.storageType === 'localStorage' ? localStorage : sessionStorage;
+                    }
+
+                    storage.setItem(AUTH_CONFIG.keyName, key);
+
+                    // Save timestamp for session timeout
+                    if (AUTH_CONFIG.sessionTimeout > 0) {
+                        storage.setItem(AUTH_CONFIG.timestampName, Date.now().toString());
+                    }
+                }
+
                 showDashboard();
             } else {
                 showLoginError('Invalid API key');
@@ -479,7 +544,13 @@
 
         function logout() {
             apiKey = '';
-            localStorage.removeItem('adminApiKey');
+
+            // Clear from both storages
+            localStorage.removeItem(AUTH_CONFIG.keyName);
+            localStorage.removeItem(AUTH_CONFIG.timestampName);
+            sessionStorage.removeItem(AUTH_CONFIG.keyName);
+            sessionStorage.removeItem(AUTH_CONFIG.timestampName);
+
             document.getElementById('dashboard').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
         }
