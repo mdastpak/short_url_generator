@@ -13,6 +13,7 @@ A production-ready URL shortening service built with Go, featuring Redis persist
 - ✅ **URL Deduplication**: Smart duplicate detection with compatibility matching
 - ✅ **In-Memory Cache**: High-performance caching with Ristretto (100× faster)
 - ✅ **QR Code Generation**: On-demand QR codes for any short URL
+- ✅ **URL Preview**: Anti-phishing preview page before redirect
 - ✅ **API Documentation**: Interactive Swagger UI with try-it-out functionality
 
 ### Security & Performance
@@ -298,6 +299,59 @@ GET /cache/metrics
 }
 ```
 
+### URL Preview (Anti-Phishing)
+
+The service includes a preview page feature that shows users the destination URL before redirecting, providing protection against phishing and malicious links.
+
+**Direct Preview Page:**
+```bash
+GET /preview/{shortURL}
+```
+
+**Preview via Query Parameter:**
+```bash
+GET /{shortURL}?preview=1
+```
+
+**Auto-redirect Option:**
+```bash
+GET /preview/{shortURL}?autoredirect=5  # Auto-redirect after 5 seconds
+```
+
+**Preview Page Features:**
+- 🔍 Shows full destination URL
+- 🔒 Displays security indicator (HTTPS vs HTTP)
+- 📅 Shows creation date and expiry info
+- 📊 Displays usage statistics
+- ⏱️ Optional auto-redirect with countdown
+- 📱 Mobile-responsive design
+
+**Example Usage:**
+```bash
+# View preview page before redirecting
+curl http://localhost:8080/preview/abc123
+
+# Or append ?preview=1 to any short URL
+curl http://localhost:8080/abc123?preview=1
+
+# Auto-redirect after 10 seconds
+curl http://localhost:8080/preview/abc123?autoredirect=10
+```
+
+**Configuration:**
+```yaml
+features:
+  preview_enabled: true           # Enable preview feature
+  preview_auto_redirect: 0        # Default auto-redirect seconds (0 = disabled)
+```
+
+**Use Cases:**
+- 🛡️ Anti-phishing protection for end users
+- ✅ Link verification before clicking
+- 📧 Email safety (inspect links from unknown sources)
+- 🏢 Corporate security policies
+- 🎓 Educational platforms
+
 ## Timezone Support
 
 The service fully supports timezone-aware expiry dates using RFC3339 format.
@@ -371,6 +425,8 @@ features:
   max_slug_length: 64             # Maximum custom slug length
   slug_suggestions_count: 3       # Number of alternatives when slug is taken
   require_auth_for_custom: false  # Future: require auth for custom slugs
+  preview_enabled: true           # Enable URL preview feature (anti-phishing)
+  preview_auto_redirect: 0        # Auto-redirect seconds on preview page (0 = disabled)
 ```
 
 ### Environment Variables

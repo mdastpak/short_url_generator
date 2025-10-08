@@ -44,6 +44,8 @@ type FeaturesConfig struct {
 	MaxSlugLength         int  `mapstructure:"max_slug_length"`
 	RequireAuthForCustom  bool `mapstructure:"require_auth_for_custom"`   // Future: require API auth for custom slugs
 	SlugSuggestionsCount  int  `mapstructure:"slug_suggestions_count"`    // Number of alternative suggestions to provide on conflict
+	PreviewEnabled        bool `mapstructure:"preview_enabled"`           // Enable URL preview feature
+	PreviewAutoRedirect   int  `mapstructure:"preview_auto_redirect"`     // Auto-redirect seconds (0 = disabled)
 }
 
 type Config struct {
@@ -125,4 +127,6 @@ func setDefaults() {
 	viper.SetDefault("features.max_slug_length", 64)
 	viper.SetDefault("features.require_auth_for_custom", false)
 	viper.SetDefault("features.slug_suggestions_count", 3)
+	viper.SetDefault("features.preview_enabled", true)
+	viper.SetDefault("features.preview_auto_redirect", 0) // 0 = disabled, >0 = seconds
 }

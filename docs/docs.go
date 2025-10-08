@@ -76,6 +76,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/preview/{shortURL}": {
+            "get": {
+                "description": "Displays a preview page showing the destination URL before redirecting (anti-phishing protection)",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "URLs"
+                ],
+                "summary": "Show URL preview page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"abc123xy\"",
+                        "description": "Short URL code",
+                        "name": "shortURL",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Auto-redirect countdown in seconds (0 to disable)",
+                        "name": "autoredirect",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Preview page HTML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Short URL not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "410": {
+                        "description": "URL has expired",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/qr/{shortURL}": {
             "get": {
                 "description": "Generates a QR code image (PNG) for the short URL with customizable size and error correction level",
@@ -339,7 +394,7 @@ const docTemplate = `{
         },
         "/{shortURL}": {
             "get": {
-                "description": "Redirects to the original URL associated with the short URL. Increments usage counter and logs access.",
+                "description": "Redirects to the original URL associated with the short URL. Increments usage counter and logs access. Add ?preview=1 to show preview page instead.",
                 "produces": [
                     "application/json"
                 ],
@@ -355,11 +410,21 @@ const docTemplate = `{
                         "name": "shortURL",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Show preview page (1=yes, 0=no)",
+                        "name": "preview",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "301": {
                         "description": "Redirect to original URL"
+                    },
+                    "302": {
+                        "description": "Redirect to preview page (if preview=1)"
                     },
                     "403": {
                         "description": "Usage limit exceeded",

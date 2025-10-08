@@ -88,7 +88,8 @@ func main() {
 	r.HandleFunc("/shorten", urlHandler.CreateShortURL).Methods("POST")
 	r.HandleFunc("/shorten/{managementID}", urlHandler.UpdateURL).Methods("PUT")
 	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
-	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET") // QR code generation
+	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET")      // QR code generation
+	r.HandleFunc("/preview/{shortURL}", urlHandler.ShowPreview).Methods("GET") // URL preview (anti-phishing)
 
 	// Swagger UI
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)

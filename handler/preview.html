@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Preview - URL Shortener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+        }
+
+        .warning-box p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .url-info {
+            margin-bottom: 30px;
+        }
+
+        .url-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .url-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .url-display a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .url-display a:hover {
+            text-decoration: underline;
+        }
+
+        .meta-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .meta-item .label {
+            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-item .value {
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .countdown {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .countdown p {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .countdown .timer {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 18px;
+            margin-top: 8px;
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #d4edda;
+            color: #155724;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .security-badge.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px;
+            }
+
+            .meta-info {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        .info-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Link Preview</h1>
+            <p>Review this link before continuing</p>
+        </div>
+
+        <div class="warning-box">
+            <p>⚠️ <strong>Security Notice:</strong> Always verify the destination URL before clicking. Be cautious of unfamiliar or suspicious links.</p>
+        </div>
+
+        <div class="url-info">
+            <div class="url-label">You are about to visit:</div>
+            <div class="url-display">
+                <a href="{{.OriginalURL}}" target="_blank" rel="noopener noreferrer">{{.OriginalURL}}</a>
+            </div>
+            {{if .IsSecure}}
+            <div class="security-badge">
+                <span class="info-icon">🔒</span>
+                Secure HTTPS Connection
+            </div>
+            {{else}}
+            <div class="security-badge warning">
+                <span class="info-icon">⚠️</span>
+                Unsecure HTTP Connection
+            </div>
+            {{end}}
+        </div>
+
+        <div class="meta-info">
+            <div class="meta-item">
+                <div class="label">Short URL</div>
+                <div class="value">{{.ShortURL}}</div>
+            </div>
+            <div class="meta-item">
+                <div class="label">Created</div>
+                <div class="value">{{.CreatedAt}}</div>
+            </div>
+            {{if .Expiry}}
+            <div class="meta-item">
+                <div class="label">Expires</div>
+                <div class="value">{{.Expiry}}</div>
+            </div>
+            {{end}}
+            {{if .UsageInfo}}
+            <div class="meta-item">
+                <div class="label">Usage</div>
+                <div class="value">{{.UsageInfo}}</div>
+            </div>
+            {{end}}
+        </div>
+
+        <div class="actions">
+            <a href="{{.OriginalURL}}" class="btn btn-primary">Continue to Destination</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">Go Back</a>
+        </div>
+
+        {{if .AutoRedirect}}
+        <div class="countdown">
+            <p>Auto-redirecting in</p>
+            <div class="timer" id="countdown">{{.CountdownSeconds}}</div>
+        </div>
+        {{end}}
+    </div>
+
+    {{if .AutoRedirect}}
+    <script>
+        let seconds = {{.CountdownSeconds}};
+        const countdownEl = document.getElementById('countdown');
+        const destinationURL = "{{.OriginalURL}}";
+
+        const interval = setInterval(() => {
+            seconds--;
+            countdownEl.textContent = seconds;
+
+            if (seconds <= 0) {
+                clearInterval(interval);
+                window.location.href = destinationURL;
+            }
+        }, 1000);
+
+        // Allow user to cancel auto-redirect by interacting with the page
+        document.querySelector('.btn-secondary').addEventListener('click', () => {
+            clearInterval(interval);
+        });
+    </script>
+    {{end}}
+</body>
+</html>

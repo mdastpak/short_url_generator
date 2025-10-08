@@ -358,11 +358,13 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 // RedirectURL handles GET /{shortURL}
 // @Summary Redirect to original URL
-// @Description Redirects to the original URL associated with the short URL. Increments usage counter and logs access.
+// @Description Redirects to the original URL associated with the short URL. Increments usage counter and logs access. Add ?preview=1 to show preview page instead.
 // @Tags URLs
 // @Produce json
 // @Param shortURL path string true "Short URL code" example("abc123xy")
+// @Param preview query int false "Show preview page (1=yes, 0=no)" default(0)
 // @Success 301 "Redirect to original URL"
+// @Success 302 "Redirect to preview page (if preview=1)"
 // @Failure 404 {object} model.ErrorResponse "Short URL not found"
 // @Failure 410 {object} model.ErrorResponse "URL has expired"
 // @Failure 403 {object} model.ErrorResponse "Usage limit exceeded"
@@ -374,6 +376,12 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	shortURL := vars["shortURL"]
+
+	// Check if preview mode is requested
+	if r.URL.Query().Get("preview") == "1" {
+		http.Redirect(w, r, "/preview/"+shortURL, http.StatusFound)
+		return
+	}
 
 	var url model.URL
 	cacheHit := false

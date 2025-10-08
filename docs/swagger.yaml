@@ -178,7 +178,7 @@ paths:
   /{shortURL}:
     get:
       description: Redirects to the original URL associated with the short URL. Increments
-        usage counter and logs access.
+        usage counter and logs access. Add ?preview=1 to show preview page instead.
       parameters:
       - description: Short URL code
         example: '"abc123xy"'
@@ -186,11 +186,18 @@ paths:
         name: shortURL
         required: true
         type: string
+      - default: 0
+        description: Show preview page (1=yes, 0=no)
+        in: query
+        name: preview
+        type: integer
       produces:
       - application/json
       responses:
         "301":
           description: Redirect to original URL
+        "302":
+          description: Redirect to preview page (if preview=1)
         "403":
           description: Usage limit exceeded
           schema:
@@ -245,6 +252,44 @@ paths:
       summary: Health check
       tags:
       - System
+  /preview/{shortURL}:
+    get:
+      description: Displays a preview page showing the destination URL before redirecting
+        (anti-phishing protection)
+      parameters:
+      - description: Short URL code
+        example: '"abc123xy"'
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      - default: 0
+        description: Auto-redirect countdown in seconds (0 to disable)
+        in: query
+        name: autoredirect
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Preview page HTML
+          schema:
+            type: string
+        "404":
+          description: Short URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "410":
+          description: URL has expired
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Show URL preview page
+      tags:
+      - URLs
   /qr/{shortURL}:
     get:
       description: Generates a QR code image (PNG) for the short URL with customizable
