@@ -423,13 +423,15 @@
             <div id="urlsTab" class="content" style="display: none;">
                 <h2 style="margin-bottom: 20px; color: #2d3748;">URL Manager</h2>
                 <div class="controls">
-                    <input type="text" id="searchInput" placeholder="Search URLs..." onkeyup="searchURLs()" />
+                    <input type="text" id="searchInput" placeholder="Search URLs..."
+                           onkeyup="searchURLs()"
+                           onkeypress="if(event.key==='Enter') event.preventDefault()" />
                     <select id="statusFilter" onchange="filterURLs()">
                         <option value="all">All URLs</option>
                         <option value="active">Active Only</option>
                         <option value="expired">Expired Only</option>
                     </select>
-                    <button onclick="loadURLs()">Refresh</button>
+                    <button onclick="loadURLs(); return false;">Refresh</button>
                 </div>
                 <div id="urlsList">
                     <div class="loading">Loading URLs...</div>
@@ -691,9 +693,18 @@
             }
         }
 
+        // Debounce timer for search
+        let searchDebounceTimer;
+
         function searchURLs() {
-            searchQuery = document.getElementById('searchInput').value;
-            loadURLs(1);
+            // Clear previous timer
+            clearTimeout(searchDebounceTimer);
+
+            // Wait 300ms after user stops typing before searching
+            searchDebounceTimer = setTimeout(() => {
+                searchQuery = document.getElementById('searchInput').value;
+                loadURLs(1);
+            }, 300);
         }
 
         function filterURLs() {
