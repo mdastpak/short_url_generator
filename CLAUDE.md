@@ -18,6 +18,9 @@ A production-ready URL shortening service built with Go that uses Redis for pers
   - `management.go`: UpdateURL and DeleteURL handlers with multi-factor security validation
   - `qr.go`: QR code generation handler
   - `preview.go`: URL preview page handler (anti-phishing)
+  - `admin.go`: Admin API endpoints (stats, URL list, detail, bulk delete, system health)
+  - `admin_dashboard.go`: Serves embedded admin dashboard HTML
+  - `admin_dashboard.html`: Single-page admin UI with embedded CSS/JS
   - `response.go`: Standardized JSON response helpers
 - `cache/`: Ristretto-based in-memory cache with TTL and metrics
 - `redis/`: Redis client initialization with connection pooling
@@ -26,7 +29,7 @@ A production-ready URL shortening service built with Go that uses Redis for pers
   - `bot_detector.go`: Intelligent bot detection with user-agent and rate analysis
 - `utils/`: URL validation with security checks (blocks localhost, private IPs, invalid schemes)
 - `logger/`: Zerolog-based structured logging initialization
-- `middleware/`: HTTP middleware (CORS, rate limiting, request logging, bot protection)
+- `middleware/`: HTTP middleware (CORS, rate limiting, request logging, bot protection, admin authentication)
 - `docs/`: Auto-generated Swagger documentation (OpenAPI 3.0 spec)
 
 ### Design Patterns

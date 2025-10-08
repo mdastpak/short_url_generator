@@ -48,6 +48,14 @@ import (
 // @tag.name System
 // @tag.description Health checks and system metrics
 
+// @tag.name Admin
+// @tag.description Admin dashboard and management endpoints (requires API key authentication)
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-Admin-Key
+// @description Admin API key for accessing protected endpoints
+
 func main() {
 	// Initialize logger
 	appLogger.Initialize()
@@ -105,6 +113,22 @@ func main() {
 	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
 	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET")      // QR code generation
 	r.HandleFunc("/preview/{shortURL}", urlHandler.ShowPreview).Methods("GET") // URL preview (anti-phishing)
+
+	// Admin routes (protected with API key authentication)
+	adminAuth := middleware.NewAdminAuth(cfg.Admin.APIKey, cfg.Admin.Enabled)
+	adminRouter := r.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(adminAuth.Protect)
+	adminRouter.HandleFunc("/dashboard", urlHandler.ServeDashboard).Methods("GET")
+	adminRouter.HandleFunc("/stats", urlHandler.GetAdminStats).Methods("GET")
+	adminRouter.HandleFunc("/urls", urlHandler.GetURLsList).Methods("GET")
+	adminRouter.HandleFunc("/urls/{shortURL}", urlHandler.GetURLDetail).Methods("GET")
+	adminRouter.HandleFunc("/urls/bulk-delete", urlHandler.BulkDeleteURLs).Methods("POST")
+	adminRouter.HandleFunc("/system/health", urlHandler.GetSystemHealth).Methods("GET")
+
+	log.Info().
+		Bool("admin_enabled", cfg.Admin.Enabled).
+		Bool("admin_api_key_set", cfg.Admin.APIKey != "").
+		Msg("Admin routes configured")
 
 	// Swagger UI
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)

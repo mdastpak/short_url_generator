@@ -56,6 +56,11 @@ type SecurityConfig struct {
 	BotMaxRequestsPerMinute int    `mapstructure:"bot_max_requests_per_minute"` // Max requests per minute before flagging as bot
 }
 
+type AdminConfig struct {
+	Enabled bool   `mapstructure:"enabled"` // Enable admin dashboard and API
+	APIKey  string `mapstructure:"api_key"` // Admin API key for authentication
+}
+
 type Config struct {
 	WebServer WebServerConfig `mapstructure:"webserver"`
 	Redis     RedisConfig     `mapstructure:"redis"`
@@ -63,6 +68,7 @@ type Config struct {
 	RateLimit RateLimitConfig `mapstructure:"ratelimit"`
 	Features  FeaturesConfig  `mapstructure:"features"`
 	Security  SecurityConfig  `mapstructure:"security"`
+	Admin     AdminConfig     `mapstructure:"admin"`
 }
 
 func LoadConfig() (Config, error) {
@@ -145,4 +151,8 @@ func setDefaults() {
 	viper.SetDefault("security.safe_browsing_api_key", "")       // Optional, leave empty to use blocklist only
 	viper.SetDefault("security.bot_detection_enabled", true)
 	viper.SetDefault("security.bot_max_requests_per_minute", 60) // 60 req/min per IP
+
+	// Admin defaults
+	viper.SetDefault("admin.enabled", true)
+	viper.SetDefault("admin.api_key", "") // MUST be set via config file or environment variable
 }

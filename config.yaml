@@ -32,3 +32,16 @@ features:
   max_slug_length: 64         # Maximum length for custom slugs
   require_auth_for_custom: false  # Future: require API authentication for custom slugs
   slug_suggestions_count: 3   # Number of alternative slug suggestions to provide on conflict
+  preview_enabled: true       # Enable URL preview page (anti-phishing protection)
+  preview_auto_redirect: 0    # Auto-redirect after N seconds (0 = disabled)
+
+security:
+  url_scanning_enabled: true   # Enable malware/phishing URL scanning
+  blocklist_enabled: true      # Enable local blocklist
+  safe_browsing_api_key: ""    # Google Safe Browsing API key (optional, leave empty to use blocklist only)
+  bot_detection_enabled: true  # Enable bot detection
+  bot_max_requests_per_minute: 60  # Max requests per minute per IP before flagging as bot
+
+admin:
+  enabled: true                     # Enable admin dashboard and API
+  api_key: "your-secret-admin-key"  # Admin API key - CHANGE THIS IN PRODUCTION!

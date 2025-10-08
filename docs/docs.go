@@ -24,6 +24,287 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/dashboard": {
+            "get": {
+                "description": "Returns the admin dashboard HTML interface",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Serve admin dashboard UI",
+                "responses": {
+                    "200": {
+                        "description": "Admin dashboard HTML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/stats": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns comprehensive system statistics including URL counts, clicks, and cache metrics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get system statistics",
+                "responses": {
+                    "200": {
+                        "description": "System statistics",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AdminStats"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/system/health": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns detailed system health including Redis metrics, cache stats, and memory usage",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get extended system health",
+                "responses": {
+                    "200": {
+                        "description": "System health details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/urls": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns paginated list of all URLs with filtering and search capabilities",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List all URLs with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (max 100)",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search in originalURL or shortURL",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "all",
+                        "description": "Filter by status: active, expired, all",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "URL list",
+                        "schema": {
+                            "$ref": "#/definitions/handler.URLListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/urls/bulk-delete": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Deletes multiple URLs at once",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Bulk delete URLs",
+                "parameters": [
+                    {
+                        "description": "Array of short URL codes to delete",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deletion result with counts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/urls/{shortURL}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns detailed information about a specific URL including access logs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get detailed URL information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Short URL code",
+                        "name": "shortURL",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of recent logs to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "URL details",
+                        "schema": {
+                            "$ref": "#/definitions/handler.URLDetailResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "URL not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/cache/metrics": {
             "get": {
                 "description": "Returns cache performance metrics including hit rate, misses, and evictions",
@@ -455,6 +736,110 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handler.AdminStats": {
+            "type": "object",
+            "properties": {
+                "activeURLs": {
+                    "type": "integer"
+                },
+                "cacheEnabled": {
+                    "type": "boolean"
+                },
+                "cacheHitRate": {
+                    "type": "number"
+                },
+                "clicksToday": {
+                    "type": "integer"
+                },
+                "expiredURLs": {
+                    "type": "integer"
+                },
+                "lastUpdated": {
+                    "type": "string"
+                },
+                "totalClicks": {
+                    "type": "integer"
+                },
+                "totalURLs": {
+                    "type": "integer"
+                },
+                "urlsCreatedToday": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.URLDetailResponse": {
+            "type": "object",
+            "properties": {
+                "accessLogs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.URLLog"
+                    }
+                },
+                "totalLogs": {
+                    "type": "integer"
+                },
+                "url": {
+                    "$ref": "#/definitions/model.URL"
+                }
+            }
+        },
+        "handler.URLListItem": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "currentUsage": {
+                    "type": "integer"
+                },
+                "expiry": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "isExpired": {
+                    "type": "boolean"
+                },
+                "managementID": {
+                    "type": "string"
+                },
+                "maxUsage": {
+                    "type": "integer"
+                },
+                "originalURL": {
+                    "type": "string"
+                },
+                "shortURL": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.URLListResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                },
+                "urls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.URLListItem"
+                    }
+                }
+            }
+        },
         "model.CacheMetricsResponse": {
             "description": "Cache performance metrics including hit rate and evictions",
             "type": "object",
@@ -620,6 +1005,53 @@ const docTemplate = `{
                 }
             }
         },
+        "model.URL": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "currentUsage": {
+                    "type": "integer"
+                },
+                "expiry": {
+                    "type": "string"
+                },
+                "managementID": {
+                    "description": "UUID v4 for update/delete operations",
+                    "type": "string"
+                },
+                "maxUsage": {
+                    "type": "integer"
+                },
+                "originalURL": {
+                    "type": "string"
+                },
+                "shortURL": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.URLLog": {
+            "type": "object",
+            "properties": {
+                "accessedAt": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "referer": {
+                    "type": "string"
+                },
+                "shortURL": {
+                    "type": "string"
+                },
+                "userAgent": {
+                    "type": "string"
+                }
+            }
+        },
         "model.UpdateRequest": {
             "description": "Request body for updating the destination of a short URL",
             "type": "object",
@@ -674,6 +1106,14 @@ const docTemplate = `{
             }
         }
     },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "Admin API key for accessing protected endpoints",
+            "type": "apiKey",
+            "name": "X-Admin-Key",
+            "in": "header"
+        }
+    },
     "tags": [
         {
             "description": "Operations for creating, redirecting, and managing short URLs",
@@ -686,6 +1126,10 @@ const docTemplate = `{
         {
             "description": "Health checks and system metrics",
             "name": "System"
+        },
+        {
+            "description": "Admin dashboard and management endpoints (requires API key authentication)",
+            "name": "Admin"
         }
     ]
 }`

@@ -1,5 +1,73 @@
 basePath: /
 definitions:
+  handler.AdminStats:
+    properties:
+      activeURLs:
+        type: integer
+      cacheEnabled:
+        type: boolean
+      cacheHitRate:
+        type: number
+      clicksToday:
+        type: integer
+      expiredURLs:
+        type: integer
+      lastUpdated:
+        type: string
+      totalClicks:
+        type: integer
+      totalURLs:
+        type: integer
+      urlsCreatedToday:
+        type: integer
+    type: object
+  handler.URLDetailResponse:
+    properties:
+      accessLogs:
+        items:
+          $ref: '#/definitions/model.URLLog'
+        type: array
+      totalLogs:
+        type: integer
+      url:
+        $ref: '#/definitions/model.URL'
+    type: object
+  handler.URLListItem:
+    properties:
+      createdAt:
+        type: string
+      currentUsage:
+        type: integer
+      expiry:
+        type: string
+      isActive:
+        type: boolean
+      isExpired:
+        type: boolean
+      managementID:
+        type: string
+      maxUsage:
+        type: integer
+      originalURL:
+        type: string
+      shortURL:
+        type: string
+    type: object
+  handler.URLListResponse:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+      urls:
+        items:
+          $ref: '#/definitions/handler.URLListItem'
+        type: array
+    type: object
   model.CacheMetricsResponse:
     description: Cache performance metrics including hit rate and evictions
     properties:
@@ -121,6 +189,37 @@ definitions:
         example: my-link-2
         type: string
     type: object
+  model.URL:
+    properties:
+      createdAt:
+        type: string
+      currentUsage:
+        type: integer
+      expiry:
+        type: string
+      managementID:
+        description: UUID v4 for update/delete operations
+        type: string
+      maxUsage:
+        type: integer
+      originalURL:
+        type: string
+      shortURL:
+        type: string
+    type: object
+  model.URLLog:
+    properties:
+      accessedAt:
+        type: string
+      ip:
+        type: string
+      referer:
+        type: string
+      shortURL:
+        type: string
+      userAgent:
+        type: string
+    type: object
   model.UpdateRequest:
     description: Request body for updating the destination of a short URL
     properties:
@@ -217,6 +316,189 @@ paths:
       summary: Redirect to original URL
       tags:
       - URLs
+  /admin/dashboard:
+    get:
+      description: Returns the admin dashboard HTML interface
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Admin dashboard HTML
+          schema:
+            type: string
+      summary: Serve admin dashboard UI
+      tags:
+      - Admin
+  /admin/stats:
+    get:
+      description: Returns comprehensive system statistics including URL counts, clicks,
+        and cache metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System statistics
+          schema:
+            $ref: '#/definitions/handler.AdminStats'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get system statistics
+      tags:
+      - Admin
+  /admin/system/health:
+    get:
+      description: Returns detailed system health including Redis metrics, cache stats,
+        and memory usage
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System health details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get extended system health
+      tags:
+      - Admin
+  /admin/urls:
+    get:
+      description: Returns paginated list of all URLs with filtering and search capabilities
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (max 100)
+        in: query
+        name: pageSize
+        type: integer
+      - description: Search in originalURL or shortURL
+        in: query
+        name: search
+        type: string
+      - default: all
+        description: 'Filter by status: active, expired, all'
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: URL list
+          schema:
+            $ref: '#/definitions/handler.URLListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List all URLs with pagination
+      tags:
+      - Admin
+  /admin/urls/{shortURL}:
+    get:
+      description: Returns detailed information about a specific URL including access
+        logs
+      parameters:
+      - description: Short URL code
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      - default: 50
+        description: Number of recent logs to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: URL details
+          schema:
+            $ref: '#/definitions/handler.URLDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get detailed URL information
+      tags:
+      - Admin
+  /admin/urls/bulk-delete:
+    post:
+      consumes:
+      - application/json
+      description: Deletes multiple URLs at once
+      parameters:
+      - description: Array of short URL codes to delete
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deletion result with counts
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Bulk delete URLs
+      tags:
+      - Admin
   /cache/metrics:
     get:
       description: Returns cache performance metrics including hit rate, misses, and
@@ -474,6 +756,12 @@ paths:
 schemes:
 - http
 - https
+securityDefinitions:
+  ApiKeyAuth:
+    description: Admin API key for accessing protected endpoints
+    in: header
+    name: X-Admin-Key
+    type: apiKey
 swagger: "2.0"
 tags:
 - description: Operations for creating, redirecting, and managing short URLs
@@ -482,3 +770,5 @@ tags:
   name: Management
 - description: Health checks and system metrics
   name: System
+- description: Admin dashboard and management endpoints (requires API key authentication)
+  name: Admin

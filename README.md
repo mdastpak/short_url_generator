@@ -26,6 +26,7 @@ A production-ready URL shortening service built with Go, featuring Redis persist
 - ✅ **Context Timeouts**: All Redis operations have timeouts
 
 ### Production-Ready
+- ✅ **Admin Dashboard**: Web UI for managing URLs, viewing statistics, and monitoring system health
 - ✅ **Structured Logging**: Zerolog-based JSON logging
 - ✅ **Graceful Shutdown**: Clean shutdown on SIGTERM/SIGINT
 - ✅ **Health Check**: `/health` endpoint for monitoring
@@ -814,6 +815,122 @@ Use for:
 - Kubernetes liveness/readiness probes
 - Load balancer health checks
 - Monitoring systems
+
+## Admin Dashboard
+
+The admin dashboard provides a comprehensive web interface for managing and monitoring your URL shortener service.
+
+### Access Dashboard
+
+Navigate to:
+```
+http://localhost:8080/admin/dashboard
+```
+
+**Authentication Required:**
+The dashboard requires an admin API key configured in `config.yaml`:
+
+```yaml
+admin:
+  enabled: true
+  api_key: "your-secret-admin-key"  # CHANGE THIS IN PRODUCTION!
+```
+
+Or via environment variable:
+```bash
+export SHORTURL_ADMIN_API_KEY="your-secret-admin-key"
+```
+
+### Dashboard Features
+
+**1. Overview Tab**
+- Total URLs (all time)
+- Active URLs (currently valid)
+- Total clicks across all URLs
+- URLs created today
+- Cache performance metrics (hit rate, enabled status)
+
+**2. URL Manager Tab**
+- Search URLs by short code or original URL
+- Filter by status (active/expired/all)
+- Paginated table view with 20 URLs per page
+- View creation date, click count, and status
+- Quick links to short URL and original destination
+
+**3. System Health Tab**
+- Overall system status
+- Redis connection status
+- Cache metrics (hits, misses, hit rate, evictions)
+- Feature configuration (deduplication, URL scanning, bot detection)
+- Rate limiting configuration
+
+### Admin API Endpoints
+
+All admin API endpoints require authentication via `X-Admin-Key` header or `Authorization: Bearer <key>`:
+
+**Get System Statistics**
+```bash
+curl -H "X-Admin-Key: your-secret-admin-key" \
+  http://localhost:8080/admin/stats
+```
+
+**List All URLs (with pagination)**
+```bash
+curl -H "X-Admin-Key: your-secret-admin-key" \
+  "http://localhost:8080/admin/urls?page=1&pageSize=20&status=active&search=example"
+```
+
+**Get URL Details (with access logs)**
+```bash
+curl -H "X-Admin-Key: your-secret-admin-key" \
+  http://localhost:8080/admin/urls/abc123?limit=50
+```
+
+**Bulk Delete URLs**
+```bash
+curl -X POST \
+  -H "X-Admin-Key: your-secret-admin-key" \
+  -H "Content-Type: application/json" \
+  -d '["url1", "url2", "url3"]' \
+  http://localhost:8080/admin/urls/bulk-delete
+```
+
+**Extended System Health**
+```bash
+curl -H "X-Admin-Key: your-secret-admin-key" \
+  http://localhost:8080/admin/system/health
+```
+
+### Security Best Practices
+
+1. **Strong API Key**: Use a cryptographically random key (32+ characters)
+   ```bash
+   # Generate a secure key
+   openssl rand -base64 32
+   ```
+
+2. **HTTPS Only**: Always use HTTPS in production to protect the API key
+
+3. **Restrict Access**: Configure firewall rules to limit admin endpoint access:
+   ```bash
+   # Only allow from specific IP
+   iptables -A INPUT -p tcp --dport 8080 -m string --string "/admin" --algo bm -s 192.168.1.100 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 8080 -m string --string "/admin" --algo bm -j DROP
+   ```
+
+4. **Environment Variables**: Never commit API keys to git, use environment variables
+
+5. **Disable in Public Deployments**: Set `admin.enabled: false` if admin features aren't needed
+
+### Dashboard Screenshots
+
+The admin dashboard features:
+- 📊 Real-time statistics with beautiful gradient cards
+- 🔍 Powerful search and filtering capabilities
+- 📱 Fully responsive design (mobile-friendly)
+- 🎨 Modern UI with smooth animations
+- 🔒 Secure API key authentication
+- ⚡ Fast, single-page application (no page reloads)
 
 ## Performance
 
