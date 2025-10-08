@@ -109,8 +109,8 @@ func (h *URLHandler) generateUniqueShortURL(ctx context.Context) (string, error)
 }
 
 // findExistingShortURL checks if the original URL already has a short URL
-// Returns the existing short URL if found and compatible, empty string otherwise
-func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL string, requestedExpiry time.Time, requestedMaxUsage int) (string, error) {
+// Returns the existing URL data if found and compatible, nil otherwise
+func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL string, requestedExpiry time.Time, requestedMaxUsage int) (*model.URL, error) {
 	// Generate hash of the original URL
 	urlHash := utils.HashURL(originalURL)
 
@@ -118,10 +118,10 @@ func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL strin
 	shortURL, err := h.redis.HGet(ctx, urlIndexKey, urlHash).Result()
 	if err == redis.Nil {
 		// No existing short URL found
-		return "", nil
+		return nil, nil
 	} else if err != nil {
 		// Redis error
-		return "", err
+		return nil, err
 	}
 
 	// Found an existing short URL, now check if it's still valid and compatible
@@ -129,15 +129,15 @@ func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL strin
 	if err == redis.Nil {
 		// Short URL no longer exists (expired/deleted), remove from index
 		h.redis.HDel(ctx, urlIndexKey, urlHash)
-		return "", nil
+		return nil, nil
 	} else if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Unmarshal existing URL data
 	var existingURL model.URL
 	if err := json.Unmarshal(urlData, &existingURL); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Check compatibility: expiry and maxUsage must match (or be unset)
@@ -147,12 +147,12 @@ func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL strin
 	maxUsageMatches := requestedMaxUsage == existingURL.MaxUsage
 
 	if expiryMatches && maxUsageMatches {
-		// Compatible! Return existing short URL
+		// Compatible! Return existing URL data
 		log.Info().
 			Str("original_url", originalURL).
 			Str("short_url", shortURL).
 			Msg("Returning existing short URL (deduplication)")
-		return shortURL, nil
+		return &existingURL, nil
 	}
 
 	// Incompatible settings, need to create a new short URL
@@ -162,7 +162,7 @@ func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL strin
 		Bool("max_usage_matches", maxUsageMatches).
 		Msg("Existing short URL found but incompatible, creating new one")
 
-	return "", nil
+	return nil, nil
 }
 
 // CreateShortURL handles POST /shorten
@@ -299,21 +299,28 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Check for duplicate URL if deduplication is enabled
 		if h.config.Features.DeduplicationEnabled {
-			existingShortURL, err := h.findExistingShortURL(ctx, input.OriginalURL, url.Expiry, url.MaxUsage)
+			existingURL, err := h.findExistingShortURL(ctx, input.OriginalURL, url.Expiry, url.MaxUsage)
 			if err != nil {
 				log.Error().Err(err).Msg("Error checking for duplicate URL")
 				// Don't fail the request, just log and continue to create new
-			} else if existingShortURL != "" {
+			} else if existingURL != nil {
 				// Found compatible existing short URL
-				fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, existingShortURL)
+				fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, existingURL.ShortURL)
+				qrCodeURL := fmt.Sprintf("%s/qr/%s", h.baseURL, existingURL.ShortURL)
+				previewURL := fmt.Sprintf("%s/preview/%s", h.baseURL, existingURL.ShortURL)
+
 				log.Info().
 					Str("short_url", fullShortURL).
-					Str("original_url", url.OriginalURL).
+					Str("original_url", existingURL.OriginalURL).
 					Msg("Returning existing short URL (duplicate)")
 
 				SendJSONSuccess(w, http.StatusOK, SuccessResponse{
-					OriginalURL: url.OriginalURL,
-					ShortURL:    fullShortURL,
+					OriginalURL:  existingURL.OriginalURL,
+					ShortURL:     fullShortURL,
+					ManagementID: existingURL.ManagementID,
+					Slug:         existingURL.ShortURL,
+					QRCodeURL:    qrCodeURL,
+					PreviewURL:   previewURL,
 				})
 				return
 			}
