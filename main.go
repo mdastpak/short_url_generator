@@ -11,6 +11,7 @@ import (
 
 	"short-url-generator/cache"
 	"short-url-generator/config"
+	_ "short-url-generator/docs" // Swagger docs
 	"short-url-generator/handler"
 	appLogger "short-url-generator/logger"
 	"short-url-generator/middleware"
@@ -18,7 +19,33 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
+
+// @title Short URL Generator API
+// @version 2.0
+// @description Production-ready URL shortening service with Redis persistence, caching, rate limiting, and comprehensive management features.
+// @termsOfService https://github.com/yourusername/short-url-generator
+
+// @contact.name API Support
+// @contact.url https://github.com/yourusername/short-url-generator/issues
+// @contact.email support@example.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+
+// @tag.name URLs
+// @tag.description Operations for creating, redirecting, and managing short URLs
+
+// @tag.name Management
+// @tag.description Secure operations for updating and deleting short URLs (requires managementID)
+
+// @tag.name System
+// @tag.description Health checks and system metrics
 
 func main() {
 	// Initialize logger
@@ -61,7 +88,12 @@ func main() {
 	r.HandleFunc("/shorten", urlHandler.CreateShortURL).Methods("POST")
 	r.HandleFunc("/shorten/{managementID}", urlHandler.UpdateURL).Methods("PUT")
 	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
-	r.HandleFunc("/{shortURL}/qr", urlHandler.GenerateQR).Methods("GET") // QR code generation
+	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET") // QR code generation
+
+	// Swagger UI
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
+	// Redirect route (must be last to avoid conflicts)
 	r.HandleFunc("/{shortURL}", urlHandler.RedirectURL).Methods("GET")
 
 	// Configure HTTP server

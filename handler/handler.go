@@ -12,7 +12,6 @@ import (
 	"short-url-generator/config"
 	"short-url-generator/model"
 	"short-url-generator/utils"
-	"strconv"
 	"strings"
 	"time"
 
@@ -164,6 +163,18 @@ func (h *URLHandler) findExistingShortURL(ctx context.Context, originalURL strin
 }
 
 // CreateShortURL handles POST /shorten
+// @Summary Create a short URL
+// @Description Shortens a URL with optional expiry time, usage limits, and custom slug. Expiry must be in RFC3339 format with timezone (e.g., 2024-12-31T23:59:59+03:30 for Iran time, or Z for UTC). Supports URL deduplication.
+// @Tags URLs
+// @Accept json
+// @Produce json
+// @Param request body model.CreateRequest true "URL shortening request"
+// @Success 201 {object} model.CreateResponse "Successfully created short URL"
+// @Success 200 {object} model.CreateResponse "Returned existing short URL (deduplication)"
+// @Failure 400 {object} model.ErrorResponse "Invalid request (bad URL, invalid expiry, etc.)"
+// @Failure 409 {object} model.SlugConflictResponse "Custom slug already taken (includes suggestions)"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /shorten [post]
 func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.config.Redis.OperationTimeout)*time.Second)
 	defer cancel()
@@ -173,7 +184,7 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		OriginalURL string `json:"originalURL"`
 		CustomSlug  string `json:"customSlug"` // Optional custom slug
 		Expiry      string `json:"expiry"`
-		MaxUsage    string `json:"maxUsage"`
+		MaxUsage    int    `json:"maxUsage"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -239,18 +250,18 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 			SendJSONError(w, http.StatusBadRequest, err, "Invalid expiry time format (use RFC3339)")
 			return
 		}
+		// Validate expiry is in the future
+		if expiry.Before(time.Now()) {
+			log.Warn().Time("expiry", expiry).Msg("Expiry date is in the past")
+			SendJSONError(w, http.StatusBadRequest, errors.New("expiry date must be in the future"), "Use RFC3339 format with timezone (e.g., 2024-12-31T23:59:59+03:30 for Iran time, or Z for UTC)")
+			return
+		}
 		url.Expiry = expiry
 	}
 
 	// Parse max usage if provided
-	if input.MaxUsage != "" {
-		maxUsage, err := strconv.Atoi(input.MaxUsage)
-		if err != nil {
-			log.Error().Err(err).Str("max_usage", input.MaxUsage).Msg("Invalid max usage")
-			SendJSONError(w, http.StatusBadRequest, err, "Invalid max usage (must be a number)")
-			return
-		}
-		url.MaxUsage = maxUsage
+	if input.MaxUsage > 0 {
+		url.MaxUsage = input.MaxUsage
 	}
 
 	// Determine short URL
@@ -327,6 +338,7 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, shortURL)
+	qrCodeURL := fmt.Sprintf("%s/qr/%s", h.baseURL, shortURL)
 	log.Info().
 		Str("short_url", fullShortURL).
 		Str("original_url", url.OriginalURL).
@@ -340,10 +352,22 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		ManagementID: url.ManagementID,
 		Slug:         shortURL,
 		IsCustomSlug: isCustomSlug,
+		QRCodeURL:    qrCodeURL,
 	})
 }
 
 // RedirectURL handles GET /{shortURL}
+// @Summary Redirect to original URL
+// @Description Redirects to the original URL associated with the short URL. Increments usage counter and logs access.
+// @Tags URLs
+// @Produce json
+// @Param shortURL path string true "Short URL code" example("abc123xy")
+// @Success 301 "Redirect to original URL"
+// @Failure 404 {object} model.ErrorResponse "Short URL not found"
+// @Failure 410 {object} model.ErrorResponse "URL has expired"
+// @Failure 403 {object} model.ErrorResponse "Usage limit exceeded"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /{shortURL} [get]
 func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.config.Redis.OperationTimeout)*time.Second)
 	defer cancel()
@@ -395,7 +419,11 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 
 	// Check expiry
 	if !url.Expiry.IsZero() && time.Now().After(url.Expiry) {
-		log.Info().Str("short_url", shortURL).Msg("URL expired")
+		log.Info().
+			Str("short_url", shortURL).
+			Time("expiry", url.Expiry).
+			Time("now", time.Now()).
+			Msg("URL expired")
 
 		// Invalidate cache
 		if h.config.Cache.Enabled && h.cache != nil {
@@ -495,6 +523,13 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 }
 
 // HealthCheck handles GET /health
+// @Summary Health check
+// @Description Returns service health status and Redis connectivity
+// @Tags System
+// @Produce json
+// @Success 200 {object} model.HealthResponse "Service is healthy"
+// @Failure 503 {object} model.HealthResponse "Service is unhealthy"
+// @Router /health [get]
 func (h *URLHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
@@ -520,6 +555,13 @@ func (h *URLHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 // CacheMetrics handles GET /cache/metrics
+// @Summary Cache performance metrics
+// @Description Returns cache performance metrics including hit rate, misses, and evictions
+// @Tags System
+// @Produce json
+// @Success 200 {object} model.CacheMetricsResponse "Cache metrics"
+// @Failure 503 {object} model.ErrorResponse "Cache is disabled"
+// @Router /cache/metrics [get]
 func (h *URLHandler) CacheMetrics(w http.ResponseWriter, r *http.Request) {
 	if !h.config.Cache.Enabled || h.cache == nil {
 		SendJSONError(w, http.StatusServiceUnavailable, errors.New("cache is disabled"), "")

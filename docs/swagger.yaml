@@ -1,0 +1,439 @@
+basePath: /
+definitions:
+  model.CacheMetricsResponse:
+    description: Cache performance metrics including hit rate and evictions
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      evictions:
+        example: 12
+        type: integer
+      hitRatio:
+        example: 0.957
+        type: number
+      hits:
+        example: 1234
+        type: integer
+      keysAdded:
+        example: 1290
+        type: integer
+      misses:
+        example: 56
+        type: integer
+    type: object
+  model.CreateRequest:
+    description: Request body for creating a new short URL. Expiry time must be in
+      RFC3339 format with timezone (e.g., 2024-12-31T23:59:59+03:30 for Iran time,
+      or use Z for UTC)
+    properties:
+      customSlug:
+        example: my-link
+        type: string
+      expiry:
+        example: "2024-12-31T23:59:59+03:30"
+        type: string
+      maxUsage:
+        example: 100
+        type: integer
+      originalURL:
+        example: https://example.com
+        type: string
+    required:
+    - originalURL
+    type: object
+  model.CreateResponse:
+    description: Response after successfully creating a short URL
+    properties:
+      createdAt:
+        example: "2024-01-15T10:30:00+03:30"
+        type: string
+      expiry:
+        example: "2024-12-31T23:59:59+03:30"
+        type: string
+      fullURL:
+        example: http://localhost:8080/abc123xy
+        type: string
+      managementID:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      maxUsage:
+        example: 100
+        type: integer
+      originalURL:
+        example: https://example.com
+        type: string
+      qrCodeURL:
+        example: http://localhost:8080/qr/abc123xy
+        type: string
+      shortURL:
+        example: abc123xy
+        type: string
+    type: object
+  model.DeleteRequest:
+    description: Request body for deleting a short URL
+    properties:
+      originalURL:
+        example: https://example.com
+        type: string
+      shortURL:
+        example: abc123xy
+        type: string
+    required:
+    - originalURL
+    - shortURL
+    type: object
+  model.ErrorResponse:
+    description: Standard error response
+    properties:
+      error:
+        example: Invalid URL format
+        type: string
+    type: object
+  model.HealthResponse:
+    description: Health check response showing service status
+    properties:
+      redis:
+        example: connected
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  model.SlugConflictResponse:
+    description: Response when requested custom slug is already in use
+    properties:
+      error:
+        example: Custom slug already exists
+        type: string
+      suggestions:
+        items:
+          $ref: '#/definitions/model.SlugSuggestion'
+        type: array
+    type: object
+  model.SlugSuggestion:
+    description: Suggested alternative slug when requested slug is taken
+    properties:
+      available:
+        example: true
+        type: boolean
+      slug:
+        example: my-link-2
+        type: string
+    type: object
+  model.UpdateRequest:
+    description: Request body for updating the destination of a short URL
+    properties:
+      newOriginalURL:
+        example: https://newexample.com
+        type: string
+      originalURL:
+        example: https://example.com
+        type: string
+      shortURL:
+        example: abc123xy
+        type: string
+    required:
+    - newOriginalURL
+    - originalURL
+    - shortURL
+    type: object
+  model.UpdateResponse:
+    description: Response after successfully updating a short URL
+    properties:
+      managementID:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      message:
+        example: URL updated successfully
+        type: string
+      newOriginalURL:
+        example: https://newexample.com
+        type: string
+      oldOriginalURL:
+        example: https://example.com
+        type: string
+      shortURL:
+        example: abc123xy
+        type: string
+      updatedAt:
+        example: "2024-01-15T11:00:00+03:30"
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: https://github.com/yourusername/short-url-generator/issues
+  description: Production-ready URL shortening service with Redis persistence, caching,
+    rate limiting, and comprehensive management features.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/yourusername/short-url-generator
+  title: Short URL Generator API
+  version: "2.0"
+paths:
+  /{shortURL}:
+    get:
+      description: Redirects to the original URL associated with the short URL. Increments
+        usage counter and logs access.
+      parameters:
+      - description: Short URL code
+        example: '"abc123xy"'
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "301":
+          description: Redirect to original URL
+        "403":
+          description: Usage limit exceeded
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Short URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "410":
+          description: URL has expired
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Redirect to original URL
+      tags:
+      - URLs
+  /cache/metrics:
+    get:
+      description: Returns cache performance metrics including hit rate, misses, and
+        evictions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cache metrics
+          schema:
+            $ref: '#/definitions/model.CacheMetricsResponse'
+        "503":
+          description: Cache is disabled
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Cache performance metrics
+      tags:
+      - System
+  /health:
+    get:
+      description: Returns service health status and Redis connectivity
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is healthy
+          schema:
+            $ref: '#/definitions/model.HealthResponse'
+        "503":
+          description: Service is unhealthy
+          schema:
+            $ref: '#/definitions/model.HealthResponse'
+      summary: Health check
+      tags:
+      - System
+  /qr/{shortURL}:
+    get:
+      description: Generates a QR code image (PNG) for the short URL with customizable
+        size and error correction level
+      parameters:
+      - description: Short URL code
+        example: '"abc123xy"'
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      - default: 256
+        description: QR code size in pixels (128-1024)
+        example: 512
+        in: query
+        name: size
+        type: integer
+      - default: medium
+        description: 'Error correction level: low, medium, high, highest'
+        enum:
+        - low
+        - medium
+        - high
+        - highest
+        example: high
+        in: query
+        name: level
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Invalid size or level parameter
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Short URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to generate QR code
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Generate QR code
+      tags:
+      - URLs
+  /shorten:
+    post:
+      consumes:
+      - application/json
+      description: Shortens a URL with optional expiry time, usage limits, and custom
+        slug. Expiry must be in RFC3339 format with timezone (e.g., 2024-12-31T23:59:59+03:30
+        for Iran time, or Z for UTC). Supports URL deduplication.
+      parameters:
+      - description: URL shortening request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returned existing short URL (deduplication)
+          schema:
+            $ref: '#/definitions/model.CreateResponse'
+        "201":
+          description: Successfully created short URL
+          schema:
+            $ref: '#/definitions/model.CreateResponse'
+        "400":
+          description: Invalid request (bad URL, invalid expiry, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Custom slug already taken (includes suggestions)
+          schema:
+            $ref: '#/definitions/model.SlugConflictResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Create a short URL
+      tags:
+      - URLs
+  /shorten/{managementID}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently deletes a short URL. Requires managementID (from creation),
+        shortURL, and original URL for 3-factor validation.
+      parameters:
+      - description: Management ID (UUID from creation response)
+        example: '"550e8400-e29b-41d4-a716-446655440000"'
+        in: path
+        name: managementID
+        required: true
+        type: string
+      - description: Delete request with validation credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: URL deleted successfully (no content)
+        "400":
+          description: Invalid request body or missing fields
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Validation failed (mismatched credentials)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Management ID or short URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Delete a short URL
+      tags:
+      - Management
+    put:
+      consumes:
+      - application/json
+      description: Updates the destination URL of a short URL. Requires managementID
+        (from creation), shortURL, and original URL for multi-factor validation.
+      parameters:
+      - description: Management ID (UUID from creation response)
+        example: '"550e8400-e29b-41d4-a716-446655440000"'
+        in: path
+        name: managementID
+        required: true
+        type: string
+      - description: Update request with validation credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: URL updated successfully
+          schema:
+            $ref: '#/definitions/model.UpdateResponse'
+        "400":
+          description: Invalid request body or missing fields
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Validation failed (mismatched credentials)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Management ID or short URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "410":
+          description: URL has expired
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Update URL destination
+      tags:
+      - Management
+schemes:
+- http
+- https
+swagger: "2.0"
+tags:
+- description: Operations for creating, redirecting, and managing short URLs
+  name: URLs
+- description: Secure operations for updating and deleting short URLs (requires managementID)
+  name: Management
+- description: Health checks and system metrics
+  name: System

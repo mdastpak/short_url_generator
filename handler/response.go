@@ -21,6 +21,7 @@ type SuccessResponse struct {
 	ManagementID string `json:"managementID,omitempty"` // UUID for update/delete operations
 	Slug         string `json:"slug,omitempty"`         // The slug part of the short URL
 	IsCustomSlug bool   `json:"isCustomSlug,omitempty"` // Whether this was a user-provided custom slug
+	QRCodeURL    string `json:"qrCodeURL,omitempty"`    // URL to generate QR code for this short URL
 }
 
 // SendJSONError sends a JSON error response

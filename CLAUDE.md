@@ -10,18 +10,20 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 
 ### Package Structure
 
-- `main.go`: Entry point with dependency injection, middleware setup, and graceful shutdown
+- `main.go`: Entry point with dependency injection, middleware setup, Swagger documentation, and graceful shutdown
 - `config/`: Viper-based configuration with environment variable overrides and defaults
-- `model/`: Data models for `URL` and `URLLog` structs
+- `model/`: Data models for `URL`, `URLLog`, and Swagger request/response structs
 - `handler/`: HTTP handlers using dependency injection pattern
   - `handler.go`: Main URLHandler struct with CreateShortURL, RedirectURL, HealthCheck, and CacheMetrics methods
   - `management.go`: UpdateURL and DeleteURL handlers with multi-factor security validation
+  - `qr.go`: QR code generation handler
   - `response.go`: Standardized JSON response helpers
 - `cache/`: Ristretto-based in-memory cache with TTL and metrics
 - `redis/`: Redis client initialization with connection pooling
 - `utils/`: URL validation with security checks (blocks localhost, private IPs, invalid schemes)
 - `logger/`: Zerolog-based structured logging initialization
 - `middleware/`: HTTP middleware (CORS, rate limiting, request logging)
+- `docs/`: Auto-generated Swagger documentation (OpenAPI 3.0 spec)
 
 ### Design Patterns
 
@@ -157,6 +159,9 @@ go test -v ./handler
 
 # Build for production
 go build -o short-url-generator
+
+# Generate/update Swagger documentation
+swag init
 ```
 
 ### Configuration
@@ -178,6 +183,20 @@ All configuration has defaults, so the app can run without `config.yaml` if Redi
 
 ### API Testing
 
+**Swagger UI (Interactive Documentation):**
+```
+http://localhost:8080/swagger/index.html
+```
+
+The Swagger UI provides:
+- Interactive API documentation
+- Try-it-out functionality for all endpoints
+- Request/response schemas
+- Example values
+- Authentication requirements
+
+**Manual cURL Examples:**
+
 Health check:
 ```sh
 curl http://localhost:8080/health
@@ -193,6 +212,11 @@ curl -X POST http://localhost:8080/shorten \
 Access short URL:
 ```sh
 curl -L http://localhost:8080/{shortURL}
+```
+
+Generate QR code:
+```sh
+curl http://localhost:8080/qr/{shortURL}?size=512&level=high -o qrcode.png
 ```
 
 Update URL (requires managementID from creation response):

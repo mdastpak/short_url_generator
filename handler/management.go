@@ -28,6 +28,20 @@ type DeleteURLRequest struct {
 }
 
 // UpdateURL handles PUT /shorten/{managementID} - updates the originalURL of a shortened URL
+// @Summary Update URL destination
+// @Description Updates the destination URL of a short URL. Requires managementID (from creation), shortURL, and original URL for multi-factor validation.
+// @Tags Management
+// @Accept json
+// @Produce json
+// @Param managementID path string true "Management ID (UUID from creation response)" example("550e8400-e29b-41d4-a716-446655440000")
+// @Param request body model.UpdateRequest true "Update request with validation credentials"
+// @Success 200 {object} model.UpdateResponse "URL updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request body or missing fields"
+// @Failure 403 {object} model.ErrorResponse "Validation failed (mismatched credentials)"
+// @Failure 404 {object} model.ErrorResponse "Management ID or short URL not found"
+// @Failure 410 {object} model.ErrorResponse "URL has expired"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /shorten/{managementID} [put]
 func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	managementID := vars["managementID"]
@@ -170,6 +184,19 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteURL handles DELETE /shorten/{managementID} - deletes a shortened URL
+// @Summary Delete a short URL
+// @Description Permanently deletes a short URL. Requires managementID (from creation), shortURL, and original URL for 3-factor validation.
+// @Tags Management
+// @Accept json
+// @Produce json
+// @Param managementID path string true "Management ID (UUID from creation response)" example("550e8400-e29b-41d4-a716-446655440000")
+// @Param request body model.DeleteRequest true "Delete request with validation credentials"
+// @Success 204 "URL deleted successfully (no content)"
+// @Failure 400 {object} model.ErrorResponse "Invalid request body or missing fields"
+// @Failure 403 {object} model.ErrorResponse "Validation failed (mismatched credentials)"
+// @Failure 404 {object} model.ErrorResponse "Management ID or short URL not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /shorten/{managementID} [delete]
 func (h *URLHandler) DeleteURL(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	managementID := vars["managementID"]

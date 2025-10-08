@@ -13,6 +13,7 @@ A production-ready URL shortening service built with Go, featuring Redis persist
 - ✅ **URL Deduplication**: Smart duplicate detection with compatibility matching
 - ✅ **In-Memory Cache**: High-performance caching with Ristretto (100× faster)
 - ✅ **QR Code Generation**: On-demand QR codes for any short URL
+- ✅ **API Documentation**: Interactive Swagger UI with try-it-out functionality
 
 ### Security & Performance
 - ✅ **URL Validation**: Blocks localhost, private IPs, and invalid schemes (SSRF protection)
@@ -66,6 +67,25 @@ docker-compose up
 
 ## API Documentation
 
+### Interactive Documentation (Swagger UI)
+
+The service includes **comprehensive interactive API documentation** powered by Swagger/OpenAPI 3.0:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
+**Features:**
+- 📖 Complete API reference with examples
+- 🧪 Try-it-out functionality for all endpoints
+- 📋 Request/response schemas
+- 🔍 Search and filter endpoints
+- 💾 Export OpenAPI spec (JSON/YAML)
+
+**Available at:** `GET /swagger/index.html`
+
+### Manual API Reference
+
 ### Health Check
 
 ```bash
@@ -88,9 +108,9 @@ Content-Type: application/json
 
 {
   "originalURL": "https://example.com",
-  "customSlug": "my-link",            // Optional, custom vanity slug (3-64 chars)
-  "expiry": "2024-12-31T23:59:59Z",  // Optional, RFC3339 format
-  "maxUsage": "10"                    // Optional, integer as string
+  "customSlug": "my-link",                     // Optional, custom vanity slug (3-64 chars)
+  "expiry": "2024-12-31T23:59:59+03:30",      // Optional, RFC3339 with timezone (use +HH:MM or Z for UTC)
+  "maxUsage": 10                               // Optional, integer
 }
 ```
 
@@ -101,7 +121,8 @@ Content-Type: application/json
   "shortURL": "http://localhost:8080/my-link",
   "managementID": "550e8400-e29b-41d4-a716-446655440000",
   "slug": "my-link",
-  "isCustomSlug": true
+  "isCustomSlug": true,
+  "qrCodeURL": "http://localhost:8080/qr/my-link"
 }
 ```
 
@@ -276,6 +297,40 @@ GET /cache/metrics
   "ttl_seconds": 300
 }
 ```
+
+## Timezone Support
+
+The service fully supports timezone-aware expiry dates using RFC3339 format.
+
+### Setting Expiry Times
+
+**With Timezone Offset (Recommended):**
+```json
+{
+  "originalURL": "https://example.com",
+  "expiry": "2024-12-31T23:59:59+03:30"  // Iran Standard Time
+}
+```
+
+**UTC Time:**
+```json
+{
+  "originalURL": "https://example.com",
+  "expiry": "2024-12-31T23:59:59Z"  // UTC (Z suffix)
+}
+```
+
+**Common Timezone Offsets:**
+- Iran: `+03:30`
+- India: `+05:30`
+- Japan: `+09:00`
+- New York: `-05:00` (EST) or `-04:00` (EDT)
+- London: `+00:00` or `+01:00` (BST)
+
+**Validation:**
+- Expiry must be in the future (validated against server time)
+- Invalid or past expiry dates are rejected with helpful error messages
+- All times are stored and compared correctly regardless of timezone
 
 ## Configuration
 
@@ -499,11 +554,13 @@ go build -o short-url-generator -ldflags="-s -w"
 
 ```
 .
+├── cache/           # Ristretto in-memory cache
 ├── config/          # Configuration management
+├── docs/            # Swagger/OpenAPI documentation (auto-generated)
 ├── handler/         # HTTP request handlers
 ├── logger/          # Structured logging setup
 ├── middleware/      # HTTP middleware (CORS, rate limiting, logging)
-├── model/           # Data models
+├── model/           # Data models and Swagger schemas
 ├── redis/           # Redis client initialization
 ├── utils/           # Utility functions (validation, hashing)
 ├── main.go          # Application entry point
@@ -532,7 +589,8 @@ Per-IP rate limiting prevents abuse:
 
 - JSON schema validation
 - URL format validation
-- Expiry time validation (RFC3339 format)
+- Expiry time validation (RFC3339 format with timezone support)
+- Expiry must be in the future
 - Max usage validation (positive integer)
 
 ### Management API Security
@@ -611,6 +669,7 @@ Use for:
 - Follow Go best practices and conventions
 - Update documentation for API changes
 - Ensure all tests pass before submitting PR
+- Regenerate Swagger docs after handler changes: `swag init`
 
 ## License
 

@@ -13,7 +13,19 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-// GenerateQR handles GET /{shortURL}/qr - generates QR code for short URL
+// GenerateQR handles GET /qr/{shortURL} - generates QR code for short URL
+// @Summary Generate QR code
+// @Description Generates a QR code image (PNG) for the short URL with customizable size and error correction level
+// @Tags URLs
+// @Produce image/png
+// @Param shortURL path string true "Short URL code" example("abc123xy")
+// @Param size query int false "QR code size in pixels (128-1024)" default(256) example(512)
+// @Param level query string false "Error correction level: low, medium, high, highest" default(medium) example(high) Enums(low, medium, high, highest)
+// @Success 200 {file} image/png "QR code image"
+// @Failure 400 {object} model.ErrorResponse "Invalid size or level parameter"
+// @Failure 404 {object} model.ErrorResponse "Short URL not found"
+// @Failure 500 {object} model.ErrorResponse "Failed to generate QR code"
+// @Router /qr/{shortURL} [get]
 func (h *URLHandler) GenerateQR(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.config.Redis.OperationTimeout)*time.Second)
 	defer cancel()
