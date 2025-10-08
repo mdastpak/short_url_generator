@@ -314,13 +314,15 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 					Str("original_url", existingURL.OriginalURL).
 					Msg("Returning existing short URL (duplicate)")
 
+				// SECURITY: Do NOT return managementID for existing URLs
+				// Only the original creator should have the managementID
 				SendJSONSuccess(w, http.StatusOK, SuccessResponse{
-					OriginalURL:  existingURL.OriginalURL,
-					ShortURL:     fullShortURL,
-					ManagementID: existingURL.ManagementID,
-					Slug:         existingURL.ShortURL,
-					QRCodeURL:    qrCodeURL,
-					PreviewURL:   previewURL,
+					OriginalURL: existingURL.OriginalURL,
+					ShortURL:    fullShortURL,
+					Slug:        existingURL.ShortURL,
+					QRCodeURL:   qrCodeURL,
+					PreviewURL:  previewURL,
+					// ManagementID intentionally omitted - security risk to expose
 				})
 				return
 			}
