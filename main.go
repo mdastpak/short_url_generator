@@ -114,11 +114,13 @@ func main() {
 	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET")      // QR code generation
 	r.HandleFunc("/preview/{shortURL}", urlHandler.ShowPreview).Methods("GET") // URL preview (anti-phishing)
 
-	// Admin routes (protected with API key authentication)
+	// Admin dashboard (public - has login screen)
+	r.HandleFunc("/admin/dashboard", urlHandler.ServeDashboard).Methods("GET")
+
+	// Admin API routes (protected with API key authentication)
 	adminAuth := middleware.NewAdminAuth(cfg.Admin.APIKey, cfg.Admin.Enabled)
 	adminRouter := r.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(adminAuth.Protect)
-	adminRouter.HandleFunc("/dashboard", urlHandler.ServeDashboard).Methods("GET")
 	adminRouter.HandleFunc("/stats", urlHandler.GetAdminStats).Methods("GET")
 	adminRouter.HandleFunc("/urls", urlHandler.GetURLsList).Methods("GET")
 	adminRouter.HandleFunc("/urls/{shortURL}", urlHandler.GetURLDetail).Methods("GET")
