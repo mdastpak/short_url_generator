@@ -22,6 +22,7 @@ type SuccessResponse struct {
 	Slug         string `json:"slug,omitempty"`         // The slug part of the short URL
 	IsCustomSlug bool   `json:"isCustomSlug,omitempty"` // Whether this was a user-provided custom slug
 	QRCodeURL    string `json:"qrCodeURL,omitempty"`    // URL to generate QR code for this short URL
+	PreviewURL   string `json:"previewURL,omitempty"`   // URL to preview page (anti-phishing)
 }
 
 // SendJSONError sends a JSON error response

@@ -339,6 +339,7 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	fullShortURL := fmt.Sprintf("%s/%s", h.baseURL, shortURL)
 	qrCodeURL := fmt.Sprintf("%s/qr/%s", h.baseURL, shortURL)
+	previewURL := fmt.Sprintf("%s/preview/%s", h.baseURL, shortURL)
 	log.Info().
 		Str("short_url", fullShortURL).
 		Str("original_url", url.OriginalURL).
@@ -353,6 +354,7 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		Slug:         shortURL,
 		IsCustomSlug: isCustomSlug,
 		QRCodeURL:    qrCodeURL,
+		PreviewURL:   previewURL,
 	})
 }
 
