@@ -537,9 +537,14 @@
                 document.getElementById('statTotalClicks').textContent = stats.totalClicks;
                 document.getElementById('statURLsToday').textContent = stats.urlsCreatedToday;
                 document.getElementById('cacheEnabled').textContent = stats.cacheEnabled ? 'Yes' : 'No';
-                document.getElementById('cacheHitRate').textContent = stats.cacheEnabled
-                    ? (stats.cacheHitRate * 100).toFixed(1) + '%'
-                    : 'N/A';
+
+                // Handle cache hit rate (avoid NaN when no cache activity yet)
+                if (stats.cacheEnabled) {
+                    const hitRate = stats.cacheHitRate || 0;
+                    document.getElementById('cacheHitRate').textContent = (hitRate * 100).toFixed(1) + '%';
+                } else {
+                    document.getElementById('cacheHitRate').textContent = 'N/A';
+                }
             } catch (error) {
                 console.error('Failed to load overview:', error);
             }
@@ -645,7 +650,8 @@
                 if (health.cache.enabled) {
                     html += '<div class="health-item">';
                     html += '<h4>Cache <span class="health-status ok">Enabled</span></h4>';
-                    html += `<p style="font-size: 14px; margin-top: 10px;">Hits: ${health.cache.hits} | Misses: ${health.cache.misses} | Hit Rate: ${(health.cache.hitRatio * 100).toFixed(1)}%</p>`;
+                    const hitRatio = health.cache.hitRatio || 0;
+                    html += `<p style="font-size: 14px; margin-top: 10px;">Hits: ${health.cache.hits} | Misses: ${health.cache.misses} | Hit Rate: ${(hitRatio * 100).toFixed(1)}%</p>`;
                     html += '</div>';
                 } else {
                     html += '<div class="health-item">';
