@@ -580,6 +580,7 @@
                 html += '<th>Short URL</th>';
                 html += '<th>Original URL</th>';
                 html += '<th>Created</th>';
+                html += '<th>Expires At</th>';
                 html += '<th>Clicks</th>';
                 html += '<th>Status</th>';
                 html += '</tr></thead><tbody>';
@@ -589,6 +590,15 @@
                     html += `<td><a href="/${url.shortURL}" class="url-link" target="_blank">${url.shortURL}</a></td>`;
                     html += `<td><a href="${url.originalURL}" class="url-link" target="_blank">${truncate(url.originalURL, 60)}</a></td>`;
                     html += `<td>${new Date(url.createdAt).toLocaleDateString()}</td>`;
+
+                    // Expires At column
+                    if (url.expiry && url.expiry !== '0001-01-01T00:00:00Z') {
+                        const expiryDate = new Date(url.expiry);
+                        html += `<td>${expiryDate.toLocaleDateString()} ${expiryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>`;
+                    } else {
+                        html += `<td style="color: #a0aec0;">Never</td>`;
+                    }
+
                     html += `<td>${url.currentUsage}${url.maxUsage ? '/' + url.maxUsage : ''}</td>`;
                     html += `<td><span class="badge ${url.isActive ? 'active' : 'expired'}">${url.isActive ? 'Active' : 'Expired'}</span></td>`;
                     html += '</tr>';
