@@ -17,12 +17,16 @@ A production-ready URL shortening service built with Go that uses Redis for pers
   - `handler.go`: Main URLHandler struct with CreateShortURL, RedirectURL, HealthCheck, and CacheMetrics methods
   - `management.go`: UpdateURL and DeleteURL handlers with multi-factor security validation
   - `qr.go`: QR code generation handler
+  - `preview.go`: URL preview page handler (anti-phishing)
   - `response.go`: Standardized JSON response helpers
 - `cache/`: Ristretto-based in-memory cache with TTL and metrics
 - `redis/`: Redis client initialization with connection pooling
+- `security/`: Security features
+  - `scanner.go`: URL malware/phishing scanner with Google Safe Browsing API and local blocklist
+  - `bot_detector.go`: Intelligent bot detection with user-agent and rate analysis
 - `utils/`: URL validation with security checks (blocks localhost, private IPs, invalid schemes)
 - `logger/`: Zerolog-based structured logging initialization
-- `middleware/`: HTTP middleware (CORS, rate limiting, request logging)
+- `middleware/`: HTTP middleware (CORS, rate limiting, request logging, bot protection)
 - `docs/`: Auto-generated Swagger documentation (OpenAPI 3.0 spec)
 
 ### Design Patterns
