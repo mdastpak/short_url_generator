@@ -216,6 +216,27 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 				Str("source", scanResult.Source).
 				Msg("Malicious URL detected")
 
+			// Track malicious URL block in Redis
+			ctxRedis, cancelRedis := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancelRedis()
+
+			// Increment total malicious URLs blocked counter
+			h.redis.Incr(ctxRedis, "security:malicious_urls")
+
+			// Add to timeline for 24h tracking
+			now := time.Now().Unix()
+			h.redis.ZAdd(ctxRedis, "security:malicious_urls_timeline", &redis.Z{
+				Score:  float64(now),
+				Member: r.RemoteAddr,
+			})
+
+			// Track IP in blocked IPs
+			h.redis.ZIncrBy(ctxRedis, "security:blocked_ips", 1, r.RemoteAddr)
+
+			// Track block reason
+			blockReason := fmt.Sprintf("malicious_url_%s", scanResult.Source)
+			h.redis.ZIncrBy(ctxRedis, "security:block_reasons", 1, blockReason)
+
 			SendJSONError(w, http.StatusForbidden,
 				errors.New("URL flagged as potentially malicious"),
 				fmt.Sprintf("This URL has been flagged for: %v. Source: %s", scanResult.Threats, scanResult.Source))

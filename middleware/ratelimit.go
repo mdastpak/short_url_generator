@@ -1,9 +1,13 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/go-redis/redis/v8"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 )
 
@@ -13,14 +17,16 @@ type RateLimiter struct {
 	mu       sync.RWMutex
 	r        rate.Limit
 	b        int
+	redis    *redis.Client
 }
 
 // NewRateLimiter creates a new rate limiter
-func NewRateLimiter(requestsPerSecond float64, burst int) *RateLimiter {
+func NewRateLimiter(requestsPerSecond float64, burst int, rdb *redis.Client) *RateLimiter {
 	return &RateLimiter{
 		limiters: make(map[string]*rate.Limiter),
 		r:        rate.Limit(requestsPerSecond),
 		b:        burst,
+		redis:    rdb,
 	}
 }
 
@@ -49,6 +55,33 @@ func (rl *RateLimiter) Limit(next http.Handler) http.Handler {
 
 		// Check if request is allowed
 		if !limiter.Allow() {
+			log.Warn().
+				Str("ip", ip).
+				Str("path", r.URL.Path).
+				Msg("Rate limit exceeded")
+
+			// Track rate limit violation in Redis
+			if rl.redis != nil {
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+
+				// Increment total rate limit violations counter
+				rl.redis.Incr(ctx, "security:rate_limit_violations")
+
+				// Add to timeline for 24h tracking
+				now := time.Now().Unix()
+				rl.redis.ZAdd(ctx, "security:rate_limit_timeline", &redis.Z{
+					Score:  float64(now),
+					Member: ip,
+				})
+
+				// Track IP in blocked IPs
+				rl.redis.ZIncrBy(ctx, "security:blocked_ips", 1, ip)
+
+				// Track block reason
+				rl.redis.ZIncrBy(ctx, "security:block_reasons", 1, "rate_limit_exceeded")
+			}
+
 			w.Header().Set("Content-Type", "application/json")
 			http.Error(w, `{"error": "Rate limit exceeded. Please try again later."}`, http.StatusTooManyRequests)
 			return

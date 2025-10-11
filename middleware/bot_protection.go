@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"short-url-generator/security"
+	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/rs/zerolog/log"
 )
 
@@ -12,13 +15,15 @@ import (
 type BotProtection struct {
 	detector *security.BotDetector
 	enabled  bool
+	redis    *redis.Client
 }
 
 // NewBotProtection creates a new bot protection middleware
-func NewBotProtection(maxRequestsPerMinute int, enabled bool) *BotProtection {
+func NewBotProtection(maxRequestsPerMinute int, enabled bool, rdb *redis.Client) *BotProtection {
 	return &BotProtection{
 		detector: security.NewBotDetector(maxRequestsPerMinute),
 		enabled:  enabled,
+		redis:    rdb,
 	}
 }
 
@@ -41,6 +46,28 @@ func (bp *BotProtection) Protect(next http.Handler) http.Handler {
 				Str("reason", reason).
 				Str("path", r.URL.Path).
 				Msg("Bot detected - request blocked")
+
+			// Track bot detection in Redis
+			if bp.redis != nil {
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+
+				// Increment total bot detection counter
+				bp.redis.Incr(ctx, "security:bot_detections")
+
+				// Add to timeline for 24h tracking (sorted set with current timestamp as score)
+				now := time.Now().Unix()
+				bp.redis.ZAdd(ctx, "security:bot_detections_timeline", &redis.Z{
+					Score:  float64(now),
+					Member: r.RemoteAddr,
+				})
+
+				// Track IP in blocked IPs (sorted set with count as score)
+				bp.redis.ZIncrBy(ctx, "security:blocked_ips", 1, r.RemoteAddr)
+
+				// Track block reason (sorted set with count as score)
+				bp.redis.ZIncrBy(ctx, "security:block_reasons", 1, reason)
+			}
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusForbidden)

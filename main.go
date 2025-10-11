@@ -97,8 +97,8 @@ func main() {
 	r := mux.NewRouter()
 
 	// Apply global middleware
-	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit.RequestsPerSecond, cfg.RateLimit.Burst)
-	botProtection := middleware.NewBotProtection(cfg.Security.BotMaxRequestsPerMinute, cfg.Security.BotDetectionEnabled)
+	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit.RequestsPerSecond, cfg.RateLimit.Burst, rdb)
+	botProtection := middleware.NewBotProtection(cfg.Security.BotMaxRequestsPerMinute, cfg.Security.BotDetectionEnabled, rdb)
 
 	r.Use(middleware.CORS)
 	r.Use(middleware.RequestLogger)
