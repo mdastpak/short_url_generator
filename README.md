@@ -948,11 +948,40 @@ The admin dashboard features:
 3. **Use Redis cluster** for horizontal scaling
 4. **Enable connection pooling** (already configured)
 
+## Planned Features
+
+See **[ROADMAP.md](ROADMAP.md)** for complete development roadmap. Highlights include:
+
+### Coming in v2.1-2.5
+- 🔗 **User-Specific URL Paths** (v2.1.0): Brand your URLs with custom user slugs
+  - Format: `yourdomain.com/john_doe/promo2025`
+  - User-friendly slugs for personal/corporate branding
+
+- 🌐 **Custom Branded Domains** (v2.5.0): Use your own domain for short URLs
+  - Example: `gog.le/summer-sale` instead of `yourdomain.com/abc123`
+  - **Two implementation approaches available:**
+    - **Approach 1 (Simple)**: 4 weeks, $50-100/month, perfect for startups
+    - **Approach 2 (Advanced)**: 8 weeks, $300-1000/month, enterprise-grade with CDN
+  - See **[CUSTOM_DOMAINS.md](CUSTOM_DOMAINS.md)** for complete technical analysis
+
+- 📊 **Analytics Dashboard** (v2.2.0): Visual analytics with charts and insights
+- 📁 **URL Collections** (v2.3.0): Organize URLs into folders
+- 🔑 **API Rate Limiting per User** (v2.4.0): Tiered usage plans
+
+### Future Releases (v3.0+)
+- 👥 **Team/Organization Support** (v3.0.0): Multi-user collaboration
+- 🔗 **Link-in-Bio** (v3.2.0): Social media landing pages
+- 🔔 **Webhook Support** (v3.3.0): Event notifications
+
+**See [ROADMAP.md](ROADMAP.md) for detailed timelines and technical specifications.**
+
 ## Documentation
 
+- **[README.md](README.md)**: This file - Complete user guide and API reference
 - **[CLAUDE.md](CLAUDE.md)**: Architecture and development guide for Claude Code
 - **[DEDUPLICATION.md](DEDUPLICATION.md)**: URL deduplication feature documentation
-- **[README.md](README.md)**: This file - Complete user guide and API reference
+- **[ROADMAP.md](ROADMAP.md)**: Development roadmap and planned features
+- **[CUSTOM_DOMAINS.md](CUSTOM_DOMAINS.md)**: Custom domain implementation analysis (two approaches)
 
 ## Contributing
 
