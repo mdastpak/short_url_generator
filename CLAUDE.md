@@ -21,6 +21,8 @@ A production-ready URL shortening service built with Go that uses Redis for pers
   - `admin.go`: Admin API endpoints (stats, URL list, detail, bulk delete, system health)
   - `admin_dashboard.go`: Serves embedded admin dashboard HTML
   - `admin_dashboard.html`: Single-page admin UI with embedded CSS/JS
+  - `user.go`: User authentication handlers (register, login, OTP verification, get user URLs)
+  - `user_panel.html`: Single-page user panel UI with login/register/dashboard (dark mode support)
   - `response.go`: Standardized JSON response helpers
 - `cache/`: Ristretto-based in-memory cache with TTL and metrics
 - `redis/`: Redis client initialization with connection pooling
@@ -142,6 +144,53 @@ Every shortened URL receives a unique **ManagementID** (UUID v4) upon creation, 
 1. CORS: Allows all origins, common methods
 2. RequestLogger: Structured logging of all HTTP requests
 3. RateLimiter: Per-IP rate limiting (configurable, default 10 req/s, burst 20)
+
+### User Authentication & Panel
+
+The service includes a complete user authentication system with JWT tokens and a full-featured user panel.
+
+**User Panel Access:**
+- Root URL: `http://localhost:8080/` (redirects to user panel)
+- Direct access: `http://localhost:8080/panel`
+
+**User Panel Features:**
+- **Registration**: Email + password signup with OTP verification
+- **Login**: JWT-based authentication (access token + refresh token)
+- **Dashboard**: Real-time stats (total URLs, active URLs, total clicks, scheduled URLs)
+- **URL Management**: Create, view, edit, delete short URLs
+- **Dark Mode**: Persistent theme toggle with localStorage
+- **Responsive Design**: Mobile-friendly interface
+
+**User-Created URLs:**
+- Automatically associated with user via UserID field
+- Can be managed only by the owner
+- Supports all advanced features (custom slug, scheduling, password protection, etc.)
+
+**Authentication Flow:**
+1. Register with email/password → OTP sent to email (or logged if email disabled)
+2. Verify OTP → account activated
+3. Login → receive access token (15min) + refresh token (7 days)
+4. Use access token in Authorization header for protected endpoints
+5. Token auto-refresh or re-login on expiry
+
+**Anonymous Usage:**
+- URLs can still be created without authentication
+- These URLs have empty UserID and cannot be viewed in user panel
+- Ideal for public/temporary usage
+
+**API Endpoints:**
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/verify-otp` - Verify email with OTP
+- `POST /api/auth/login` - Login and get JWT tokens
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/resend-otp` - Resend verification code
+- `GET /api/user/urls` - Get authenticated user's URLs (protected)
+
+**Optional Authentication for URL Creation:**
+- `/shorten` endpoint supports optional JWT authentication
+- If Authorization header present and valid → URL associated with user
+- If no auth or invalid token → URL created anonymously
+- No error on invalid token (graceful degradation)
 
 ## Common Commands
 
