@@ -61,14 +61,44 @@ type AdminConfig struct {
 	APIKey  string `mapstructure:"api_key"` // Admin API key for authentication
 }
 
+type EmailConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`       // Enable email sending
+	SMTPHost     string `mapstructure:"smtp_host"`     // SMTP server host
+	SMTPPort     string `mapstructure:"smtp_port"`     // SMTP server port
+	SMTPUsername string `mapstructure:"smtp_username"` // SMTP username
+	SMTPPassword string `mapstructure:"smtp_password"` // SMTP password
+	FromEmail    string `mapstructure:"from_email"`    // From email address
+	FromName     string `mapstructure:"from_name"`     // From name
+}
+
+type JWTConfig struct {
+	SecretKey            string `mapstructure:"secret_key"`             // JWT signing secret (min 32 chars)
+	AccessTokenDuration  string `mapstructure:"access_token_duration"`  // e.g., "15m", "1h"
+	RefreshTokenDuration string `mapstructure:"refresh_token_duration"` // e.g., "168h" (7 days)
+	OTPDuration          string `mapstructure:"otp_duration"`           // e.g., "10m"
+}
+
+type UserFeaturesConfig struct {
+	RegistrationEnabled         bool `mapstructure:"registration_enabled"`            // Allow new user registration
+	CustomDomainsEnabled        bool `mapstructure:"custom_domains_enabled"`          // Allow custom domains
+	PasswordProtectedURLsEnabled bool `mapstructure:"password_protected_urls_enabled"` // Allow password-protected URLs
+	ScheduledURLsEnabled        bool `mapstructure:"scheduled_urls_enabled"`          // Allow scheduled activation
+	URLAliasesEnabled           bool `mapstructure:"url_aliases_enabled"`             // Allow URL aliases
+	MaxURLsPerUser              int  `mapstructure:"max_urls_per_user"`               // Max URLs per user (0 = unlimited)
+	MaxAliasesPerURL            int  `mapstructure:"max_aliases_per_url"`             // Max aliases per URL
+}
+
 type Config struct {
-	WebServer WebServerConfig `mapstructure:"webserver"`
-	Redis     RedisConfig     `mapstructure:"redis"`
-	Cache     CacheConfig     `mapstructure:"cache"`
-	RateLimit RateLimitConfig `mapstructure:"ratelimit"`
-	Features  FeaturesConfig  `mapstructure:"features"`
-	Security  SecurityConfig  `mapstructure:"security"`
-	Admin     AdminConfig     `mapstructure:"admin"`
+	WebServer    WebServerConfig    `mapstructure:"webserver"`
+	Redis        RedisConfig        `mapstructure:"redis"`
+	Cache        CacheConfig        `mapstructure:"cache"`
+	RateLimit    RateLimitConfig    `mapstructure:"ratelimit"`
+	Features     FeaturesConfig     `mapstructure:"features"`
+	Security     SecurityConfig     `mapstructure:"security"`
+	Admin        AdminConfig        `mapstructure:"admin"`
+	Email        EmailConfig        `mapstructure:"email"`
+	JWT          JWTConfig          `mapstructure:"jwt"`
+	UserFeatures UserFeaturesConfig `mapstructure:"user_features"`
 }
 
 func LoadConfig() (Config, error) {
@@ -155,4 +185,28 @@ func setDefaults() {
 	// Admin defaults
 	viper.SetDefault("admin.enabled", true)
 	viper.SetDefault("admin.api_key", "") // MUST be set via config file or environment variable
+
+	// Email defaults
+	viper.SetDefault("email.enabled", false) // Disabled by default for development
+	viper.SetDefault("email.smtp_host", "smtp.gmail.com")
+	viper.SetDefault("email.smtp_port", "587")
+	viper.SetDefault("email.smtp_username", "")
+	viper.SetDefault("email.smtp_password", "")
+	viper.SetDefault("email.from_email", "noreply@localhost")
+	viper.SetDefault("email.from_name", "Short URL Generator")
+
+	// JWT defaults
+	viper.SetDefault("jwt.secret_key", "") // MUST be set via config file or environment variable
+	viper.SetDefault("jwt.access_token_duration", "15m")
+	viper.SetDefault("jwt.refresh_token_duration", "168h") // 7 days
+	viper.SetDefault("jwt.otp_duration", "10m")
+
+	// User features defaults
+	viper.SetDefault("user_features.registration_enabled", true)
+	viper.SetDefault("user_features.custom_domains_enabled", true)
+	viper.SetDefault("user_features.password_protected_urls_enabled", true)
+	viper.SetDefault("user_features.scheduled_urls_enabled", true)
+	viper.SetDefault("user_features.url_aliases_enabled", true)
+	viper.SetDefault("user_features.max_urls_per_user", 1000)
+	viper.SetDefault("user_features.max_aliases_per_url", 10)
 }

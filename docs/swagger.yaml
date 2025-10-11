@@ -220,6 +220,38 @@ definitions:
         example: ok
         type: string
     type: object
+  model.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: SecurePassword123
+        type: string
+    type: object
+  model.LoginResponse:
+    properties:
+      accessToken:
+        type: string
+      refreshToken:
+        type: string
+      user:
+        $ref: '#/definitions/model.UserResponse'
+    type: object
+  model.RefreshTokenRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  model.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: SecurePassword123
+        type: string
+    type: object
   model.SlugConflictResponse:
     description: Response when requested custom slug is already in use
     properties:
@@ -243,10 +275,21 @@ definitions:
     type: object
   model.URL:
     properties:
+      active:
+        description: Manual activation status (for scheduled URLs)
+        type: boolean
+      aliases:
+        description: Additional short codes pointing to same URL
+        items:
+          type: string
+        type: array
       createdAt:
         type: string
       currentUsage:
         type: integer
+      customDomain:
+        description: Optional custom domain (e.g., "go.company.com")
+        type: string
       expiry:
         type: string
       managementID:
@@ -256,7 +299,19 @@ definitions:
         type: integer
       originalURL:
         type: string
+      passwordHash:
+        description: Bcrypt hash for password-protected URLs (empty if not protected)
+        type: string
+      scheduledEnd:
+        description: URL becomes inactive at this time (zero value = no end)
+        type: string
+      scheduledStart:
+        description: URL becomes active at this time (zero value = active immediately)
+        type: string
       shortURL:
+        type: string
+      userID:
+        description: Owner user ID (empty for anonymous URLs)
         type: string
     type: object
   model.URLLog:
@@ -309,6 +364,32 @@ definitions:
         type: string
       updatedAt:
         example: "2024-01-15T11:00:00+03:30"
+        type: string
+    type: object
+  model.UserResponse:
+    properties:
+      active:
+        type: boolean
+      createdAt:
+        type: string
+      customDomain:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      lastLoginAt:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  model.VerifyOTPRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      otp:
+        example: "123456"
         type: string
     type: object
 host: localhost:8080
@@ -575,6 +656,190 @@ paths:
       summary: Bulk delete URLs
       tags:
       - Admin
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with email and password, returns access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful with tokens
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Email not verified or account inactive
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Login
+      tags:
+      - Authentication
+  /api/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New access token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - Authentication
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register with email and password, sends OTP for verification
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP sent message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Email already exists
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /api/auth/resend-otp:
+    post:
+      consumes:
+      - application/json
+      description: Resend verification code to email
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP sent message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Resend OTP code
+      tags:
+      - Authentication
+  /api/auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verify email with OTP code sent during registration
+      parameters:
+      - description: OTP verification data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or OTP
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: OTP not found or expired
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Verify OTP code
+      tags:
+      - Authentication
   /cache/metrics:
     get:
       description: Returns cache performance metrics including hit rate, misses, and
@@ -848,3 +1113,5 @@ tags:
   name: System
 - description: Admin dashboard and management endpoints (requires API key authentication)
   name: Admin
+- description: User registration, login, and OTP verification
+  name: Authentication

@@ -9,9 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"short-url-generator/auth"
 	"short-url-generator/cache"
 	"short-url-generator/config"
 	_ "short-url-generator/docs" // Swagger docs
+	"short-url-generator/email"
 	"short-url-generator/handler"
 	appLogger "short-url-generator/logger"
 	"short-url-generator/middleware"
@@ -50,6 +52,9 @@ import (
 
 // @tag.name Admin
 // @tag.description Admin dashboard and management endpoints (requires API key authentication)
+
+// @tag.name Authentication
+// @tag.description User registration, login, and OTP verification
 
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
@@ -93,6 +98,48 @@ func main() {
 	// Create handler with dependency injection
 	urlHandler := handler.NewURLHandler(rdb, cacheClient, cfg, urlScanner)
 
+	// Initialize email service
+	emailService := email.NewEmailService(
+		cfg.Email.SMTPHost,
+		cfg.Email.SMTPPort,
+		cfg.Email.SMTPUsername,
+		cfg.Email.SMTPPassword,
+		cfg.Email.FromEmail,
+		cfg.Email.FromName,
+		cfg.Email.Enabled,
+	)
+	log.Info().
+		Bool("email_enabled", cfg.Email.Enabled).
+		Str("smtp_host", cfg.Email.SMTPHost).
+		Msg("Email service initialized")
+
+	// Initialize JWT manager
+	accessTokenDuration, err := time.ParseDuration(cfg.JWT.AccessTokenDuration)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid access token duration")
+	}
+	refreshTokenDuration, err := time.ParseDuration(cfg.JWT.RefreshTokenDuration)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid refresh token duration")
+	}
+	otpDuration, err := time.ParseDuration(cfg.JWT.OTPDuration)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid OTP duration")
+	}
+
+	jwtManager := auth.NewJWTManager(cfg.JWT.SecretKey, accessTokenDuration, refreshTokenDuration)
+	log.Info().
+		Dur("access_token_duration", accessTokenDuration).
+		Dur("refresh_token_duration", refreshTokenDuration).
+		Dur("otp_duration", otpDuration).
+		Msg("JWT manager initialized")
+
+	// Create user handler
+	userHandler := handler.NewUserHandler(rdb, jwtManager, emailService, otpDuration)
+	log.Info().
+		Bool("registration_enabled", cfg.UserFeatures.RegistrationEnabled).
+		Msg("User handler initialized")
+
 	// Set up router
 	r := mux.NewRouter()
 
@@ -113,6 +160,17 @@ func main() {
 	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
 	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET")      // QR code generation
 	r.HandleFunc("/preview/{shortURL}", urlHandler.ShowPreview).Methods("GET") // URL preview (anti-phishing)
+
+	// User authentication routes (public)
+	r.HandleFunc("/api/auth/register", userHandler.Register).Methods("POST")
+	r.HandleFunc("/api/auth/verify-otp", userHandler.VerifyOTP).Methods("POST")
+	r.HandleFunc("/api/auth/login", userHandler.Login).Methods("POST")
+	r.HandleFunc("/api/auth/refresh", userHandler.RefreshToken).Methods("POST")
+	r.HandleFunc("/api/auth/resend-otp", userHandler.ResendOTP).Methods("POST")
+
+	log.Info().
+		Bool("registration_enabled", cfg.UserFeatures.RegistrationEnabled).
+		Msg("User authentication routes configured")
 
 	// Admin dashboard (public - has login screen)
 	r.HandleFunc("/admin/dashboard", urlHandler.ServeDashboard).Methods("GET")

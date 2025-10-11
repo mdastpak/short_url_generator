@@ -45,3 +45,30 @@ security:
 admin:
   enabled: true                     # Enable admin dashboard and API
   api_key: "your-secret-admin-key"  # Admin API key - CHANGE THIS IN PRODUCTION!
+
+# Email configuration (for OTP and notifications)
+email:
+  enabled: false  # Set to true in production
+  smtp_host: "smtp.gmail.com"
+  smtp_port: "587"
+  smtp_username: "your-email@gmail.com"
+  smtp_password: "your-app-password"  # Use app-specific password for Gmail
+  from_email: "noreply@yourdomain.com"
+  from_name: "Short URL Generator"
+
+# JWT authentication
+jwt:
+  secret_key: "your-very-long-secret-jwt-key-change-this-in-production-min-32-chars"  # CHANGE IN PRODUCTION! Minimum 32 characters
+  access_token_duration: "15m"   # Access token validity (e.g., 15m, 1h, 24h)
+  refresh_token_duration: "168h" # Refresh token validity (168h = 7 days)
+  otp_duration: "10m"            # OTP code validity (10 minutes)
+
+# User features
+user_features:
+  registration_enabled: true           # Allow new user registration
+  custom_domains_enabled: true         # Allow users to use custom domains
+  password_protected_urls_enabled: true # Allow password-protected URLs
+  scheduled_urls_enabled: true         # Allow scheduled activation/deactivation
+  url_aliases_enabled: true            # Allow multiple short codes for same URL
+  max_urls_per_user: 1000              # Maximum URLs per user (0 = unlimited)
+  max_aliases_per_url: 10              # Maximum aliases per URL
