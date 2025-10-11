@@ -16,9 +16,15 @@ import (
 
 // UpdateURLRequest represents the request body for updating a URL
 type UpdateURLRequest struct {
-	OriginalURL    string `json:"originalURL"`
-	ShortURL       string `json:"shortURL"`
-	NewOriginalURL string `json:"newOriginalURL"`
+	OriginalURL    string  `json:"originalURL"`
+	ShortURL       string  `json:"shortURL"`
+	NewOriginalURL string  `json:"newOriginalURL"`
+	Expiry         *string `json:"expiry"`         // Optional: update expiry (RFC3339 format, null to remove)
+	MaxUsage       *int    `json:"maxUsage"`       // Optional: update max usage (null to set unlimited)
+	Active         *bool   `json:"active"`         // Optional: update active status
+	CustomDomain   *string `json:"customDomain"`   // Optional: update custom domain
+	ScheduledStart *string `json:"scheduledStart"` // Optional: update scheduled start
+	ScheduledEnd   *string `json:"scheduledEnd"`   // Optional: update scheduled end
 }
 
 // DeleteURLRequest represents the request body for deleting a URL
@@ -120,6 +126,59 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 
 	// Update the original URL
 	url.OriginalURL = input.NewOriginalURL
+
+	// Update optional fields if provided
+	if input.Active != nil {
+		url.Active = *input.Active
+	}
+
+	if input.MaxUsage != nil {
+		url.MaxUsage = *input.MaxUsage
+	}
+
+	if input.CustomDomain != nil {
+		url.CustomDomain = *input.CustomDomain
+	}
+
+	if input.Expiry != nil {
+		if *input.Expiry == "" {
+			// Empty string means remove expiry
+			url.Expiry = time.Time{}
+		} else {
+			expiry, err := time.Parse(time.RFC3339, *input.Expiry)
+			if err != nil {
+				SendJSONError(w, http.StatusBadRequest, err, "Invalid expiry time format (use RFC3339)")
+				return
+			}
+			url.Expiry = expiry
+		}
+	}
+
+	if input.ScheduledStart != nil {
+		if *input.ScheduledStart == "" {
+			url.ScheduledStart = time.Time{}
+		} else {
+			scheduledStart, err := time.Parse(time.RFC3339, *input.ScheduledStart)
+			if err != nil {
+				SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled start time format (use RFC3339)")
+				return
+			}
+			url.ScheduledStart = scheduledStart
+		}
+	}
+
+	if input.ScheduledEnd != nil {
+		if *input.ScheduledEnd == "" {
+			url.ScheduledEnd = time.Time{}
+		} else {
+			scheduledEnd, err := time.Parse(time.RFC3339, *input.ScheduledEnd)
+			if err != nil {
+				SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled end time format (use RFC3339)")
+				return
+			}
+			url.ScheduledEnd = scheduledEnd
+		}
+	}
 
 	// Marshal and save updated URL
 	updatedData, err := json.Marshal(url)

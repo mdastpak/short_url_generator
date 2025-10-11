@@ -1046,7 +1046,10 @@
             const updateData = {
                 originalURL: document.getElementById('editOldUrl').value,
                 shortURL: document.getElementById('editShortUrl').value,
-                newOriginalURL: document.getElementById('editOriginalUrl').value
+                newOriginalURL: document.getElementById('editOriginalUrl').value,
+                expiry: document.getElementById('editExpiryDate').value ? new Date(document.getElementById('editExpiryDate').value).toISOString() : null,
+                maxUsage: document.getElementById('editMaxUsage').value ? parseInt(document.getElementById('editMaxUsage').value) : null,
+                active: document.getElementById('editActiveToggle').checked
             };
 
             try {
