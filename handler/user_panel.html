@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Panel - Short URL Generator</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --primary-hover: #5568d3;
+            --secondary-color: #764ba2;
+            --success-color: #48bb78;
+            --danger-color: #f56565;
+            --warning-color: #ed8936;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --text-dark: #2d3748;
+            --text-light: #718096;
+            --border-color: #e2e8f0;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #7c3aed;
+            --primary-hover: #6d28d9;
+            --bg-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            --text-dark: #f7fafc;
+            --text-light: #cbd5e0;
+            --border-color: #4a5568;
+            --card-bg: #2d3748;
+            --input-bg: #4a5568;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 28px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: var(--input-bg);
+            border: 2px solid var(--border-color);
+            color: var(--text-dark);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary-color);
+        }
+
+        .logout-btn {
+            background: var(--danger-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #e53e3e;
+        }
+
+        /* Auth Screens */
+        .auth-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+
+        .auth-box {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 450px;
+            transition: background 0.3s ease;
+        }
+
+        .auth-box h2 {
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+            background: var(--input-bg);
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .auth-button:hover {
+            background: var(--primary-hover);
+        }
+
+        .auth-button:disabled {
+            background: var(--text-light);
+            cursor: not-allowed;
+        }
+
+        .auth-link {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-light);
+        }
+
+        .auth-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            color: var(--text-light);
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            color: var(--primary-color);
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        /* URL Management */
+        .url-section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            transition: background 0.3s ease;
+        }
+
+        .url-section h2 {
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+
+        .url-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        /* URL List */
+        .url-list {
+            margin-top: 30px;
+        }
+
+        .url-item {
+            background: var(--input-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .url-item:hover {
+            border-color: var(--primary-color);
+        }
+
+        .url-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .url-info h4 {
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .url-info .short-url {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .url-info .original-url {
+            color: var(--text-light);
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .url-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .url-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .url-stat {
+            text-align: center;
+        }
+
+        .url-stat .label {
+            color: var(--text-light);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .url-stat .value {
+            color: var(--text-dark);
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--text-light);
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: var(--text-dark);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="auth-screen">
+            <div class="auth-box">
+                <h2>Login</h2>
+                <div id="loginError" class="error-message hidden"></div>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="user@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Your password" required>
+                    </div>
+                    <button type="submit" class="auth-button">Login</button>
+                </form>
+                <div class="auth-link">
+                    Don't have an account? <a href="#" onclick="showRegister()">Register</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Screen -->
+        <div id="registerScreen" class="auth-screen hidden">
+            <div class="auth-box">
+                <h2>Register</h2>
+                <div id="registerError" class="error-message hidden"></div>
+                <div id="registerSuccess" class="success-message hidden"></div>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" placeholder="user@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" placeholder="Min 8 characters" required minlength="8">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">Confirm Password</label>
+                        <input type="password" id="registerPasswordConfirm" placeholder="Re-enter password" required>
+                    </div>
+                    <button type="submit" class="auth-button">Register</button>
+                </form>
+                <div class="auth-link">
+                    Already have an account? <a href="#" onclick="showLogin()">Login</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTP Verification Screen -->
+        <div id="otpScreen" class="auth-screen hidden">
+            <div class="auth-box">
+                <h2>Verify Email</h2>
+                <p style="text-align: center; color: var(--text-light); margin-bottom: 20px;">
+                    We sent a 6-digit code to <strong id="otpEmail"></strong>
+                </p>
+                <div id="otpError" class="error-message hidden"></div>
+                <form id="otpForm">
+                    <div class="form-group">
+                        <label for="otpCode">Verification Code</label>
+                        <input type="text" id="otpCode" placeholder="123456" required maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                    <button type="submit" class="auth-button">Verify</button>
+                </form>
+                <div class="auth-link">
+                    Didn't receive code? <a href="#" onclick="resendOTP()">Resend</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboardScreen" class="dashboard">
+            <div class="header">
+                <h1>My URL Dashboard</h1>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <span id="themeIcon">🌙 Dark Mode</span>
+                    </button>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total URLs</h3>
+                    <div class="value" id="totalUrls">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active URLs</h3>
+                    <div class="value" id="activeUrls">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Clicks</h3>
+                    <div class="value" id="totalClicks">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Scheduled URLs</h3>
+                    <div class="value" id="scheduledUrls">0</div>
+                </div>
+            </div>
+
+            <!-- Create URL -->
+            <div class="url-section">
+                <h2>Create Short URL</h2>
+                <div id="createUrlError" class="error-message hidden"></div>
+                <div id="createUrlSuccess" class="success-message hidden"></div>
+                <form id="createUrlForm" class="url-form">
+                    <div class="form-group">
+                        <label for="originalUrl">Original URL *</label>
+                        <input type="url" id="originalUrl" placeholder="https://example.com/very-long-url" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customSlug">Custom Slug (Optional)</label>
+                            <input type="text" id="customSlug" placeholder="my-custom-link" pattern="[a-zA-Z0-9_-]+">
+                        </div>
+                        <div class="form-group">
+                            <label for="customDomain">Custom Domain (Optional)</label>
+                            <input type="text" id="customDomain" placeholder="go.mycompany.com">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expiryDate">Expiry Date (Optional)</label>
+                            <input type="datetime-local" id="expiryDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="maxUsage">Max Usage (Optional)</label>
+                            <input type="number" id="maxUsage" placeholder="100" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="scheduledStart">Scheduled Start (Optional)</label>
+                            <input type="datetime-local" id="scheduledStart">
+                        </div>
+                        <div class="form-group">
+                            <label for="scheduledEnd">Scheduled End (Optional)</label>
+                            <input type="datetime-local" id="scheduledEnd">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="urlPassword">Password Protection (Optional)</label>
+                        <input type="password" id="urlPassword" placeholder="Leave empty for no password">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="activeToggle" checked>
+                            <label for="activeToggle">Active (URL is accessible)</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-button">Create Short URL</button>
+                </form>
+            </div>
+
+            <!-- My URLs -->
+            <div class="url-section">
+                <h2>My URLs</h2>
+                <div id="urlList" class="url-list">
+                    <div class="loading">Loading your URLs...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit URL Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeEditModal()">&times;</span>
+            <h3>Edit URL</h3>
+            <div id="editError" class="error-message hidden"></div>
+            <form id="editUrlForm" class="url-form">
+                <input type="hidden" id="editManagementId">
+                <input type="hidden" id="editShortUrl">
+                <input type="hidden" id="editOldUrl">
+
+                <div class="form-group">
+                    <label for="editOriginalUrl">Original URL *</label>
+                    <input type="url" id="editOriginalUrl" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editExpiryDate">Expiry Date</label>
+                        <input type="datetime-local" id="editExpiryDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="editMaxUsage">Max Usage</label>
+                        <input type="number" id="editMaxUsage" min="1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="editActiveToggle">
+                        <label for="editActiveToggle">Active</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-button">Update URL</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let accessToken = localStorage.getItem('accessToken');
+        let refreshToken = localStorage.getItem('refreshToken');
+        let userData = JSON.parse(localStorage.getItem('userData') || 'null');
+        let userUrls = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            checkAuth();
+            setupForms();
+        });
+
+        // Theme Management
+        function initTheme() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                icon.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+            }
+        }
+
+        // Auth Check
+        function checkAuth() {
+            if (accessToken && userData) {
+                showDashboard();
+                loadUserUrls();
+            } else {
+                showLogin();
+            }
+        }
+
+        // Screen Navigation
+        function showLogin() {
+            hideAllScreens();
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function showRegister() {
+            hideAllScreens();
+            document.getElementById('registerScreen').classList.remove('hidden');
+        }
+
+        function showOTP(email) {
+            hideAllScreens();
+            document.getElementById('otpEmail').textContent = email;
+            document.getElementById('otpScreen').classList.remove('hidden');
+        }
+
+        function showDashboard() {
+            hideAllScreens();
+            document.getElementById('dashboardScreen').style.display = 'block';
+        }
+
+        function hideAllScreens() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('registerScreen').classList.add('hidden');
+            document.getElementById('otpScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').style.display = 'none';
+        }
+
+        // Form Setup
+        function setupForms() {
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('registerForm').addEventListener('submit', handleRegister);
+            document.getElementById('otpForm').addEventListener('submit', handleOTP);
+            document.getElementById('createUrlForm').addEventListener('submit', handleCreateUrl);
+            document.getElementById('editUrlForm').addEventListener('submit', handleEditUrl);
+        }
+
+        // Login
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    accessToken = data.data.accessToken;
+                    refreshToken = data.data.refreshToken;
+                    userData = data.data.user;
+
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('refreshToken', refreshToken);
+                    localStorage.setItem('userData', JSON.stringify(userData));
+
+                    showDashboard();
+                    loadUserUrls();
+                } else {
+                    showError('loginError', data.error || 'Login failed');
+                }
+            } catch (error) {
+                showError('loginError', 'Network error. Please try again.');
+            }
+        }
+
+        // Register
+        async function handleRegister(e) {
+            e.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerPasswordConfirm').value;
+
+            if (password !== confirmPassword) {
+                showError('registerError', 'Passwords do not match');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('registerSuccess', data.message || 'Registration successful! Check your email for OTP.');
+                    setTimeout(() => showOTP(email), 2000);
+                } else {
+                    showError('registerError', data.error || 'Registration failed');
+                }
+            } catch (error) {
+                showError('registerError', 'Network error. Please try again.');
+            }
+        }
+
+        // OTP Verification
+        async function handleOTP(e) {
+            e.preventDefault();
+            const email = document.getElementById('otpEmail').textContent;
+            const otp = document.getElementById('otpCode').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Email verified! Please login.');
+                    showLogin();
+                } else {
+                    showError('otpError', data.error || 'Invalid OTP');
+                }
+            } catch (error) {
+                showError('otpError', 'Network error. Please try again.');
+            }
+        }
+
+        // Resend OTP
+        async function resendOTP() {
+            const email = document.getElementById('otpEmail').textContent;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('OTP resent! Check your email.');
+                } else {
+                    alert(data.error || 'Failed to resend OTP');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Logout
+        function logout() {
+            accessToken = null;
+            refreshToken = null;
+            userData = null;
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userData');
+            showLogin();
+        }
+
+        // Create URL
+        async function handleCreateUrl(e) {
+            e.preventDefault();
+
+            const urlData = {
+                originalURL: document.getElementById('originalUrl').value,
+                customSlug: document.getElementById('customSlug').value || undefined,
+                customDomain: document.getElementById('customDomain').value || undefined,
+                expiry: document.getElementById('expiryDate').value ? new Date(document.getElementById('expiryDate').value).toISOString() : undefined,
+                maxUsage: document.getElementById('maxUsage').value ? parseInt(document.getElementById('maxUsage').value) : undefined,
+                scheduledStart: document.getElementById('scheduledStart').value ? new Date(document.getElementById('scheduledStart').value).toISOString() : undefined,
+                scheduledEnd: document.getElementById('scheduledEnd').value ? new Date(document.getElementById('scheduledEnd').value).toISOString() : undefined,
+                password: document.getElementById('urlPassword').value || undefined,
+                active: document.getElementById('activeToggle').checked
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/shorten`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(urlData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('createUrlSuccess', `Short URL created: ${data.data.shortURL}`);
+                    document.getElementById('createUrlForm').reset();
+                    document.getElementById('activeToggle').checked = true;
+                    loadUserUrls();
+                } else {
+                    showError('createUrlError', data.error || 'Failed to create URL');
+                }
+            } catch (error) {
+                showError('createUrlError', 'Network error. Please try again.');
+            }
+        }
+
+        // Load User URLs
+        async function loadUserUrls() {
+            const urlList = document.getElementById('urlList');
+            urlList.innerHTML = '<div class="loading">Loading your URLs...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/user/urls`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Token expired, logout
+                        logout();
+                        return;
+                    }
+                    throw new Error('Failed to load URLs');
+                }
+
+                const data = await response.json();
+                const stats = data.data;
+
+                // Update stats
+                document.getElementById('totalUrls').textContent = stats.totalUrls || 0;
+                document.getElementById('activeUrls').textContent = stats.activeUrls || 0;
+                document.getElementById('totalClicks').textContent = stats.totalClicks || 0;
+                document.getElementById('scheduledUrls').textContent = stats.scheduledUrls || 0;
+
+                // Update URLs list
+                userUrls = stats.urls || [];
+
+                if (userUrls.length === 0) {
+                    urlList.innerHTML = '<div class="loading">No URLs yet. Create your first short URL above!</div>';
+                    return;
+                }
+
+                // Render URLs
+                urlList.innerHTML = userUrls.map(url => `
+                    <div class="url-item">
+                        <div class="url-item-header">
+                            <div class="url-info">
+                                <div class="short-url">${API_BASE}/${url.shortURL}</div>
+                                <div class="original-url">${url.originalURL}</div>
+                            </div>
+                            <div class="url-actions">
+                                <button class="btn btn-success" onclick="copyUrl('${url.shortURL}')">Copy</button>
+                                <button class="btn btn-primary" onclick="generateQR('${url.shortURL}')">QR</button>
+                                <button class="btn btn-primary" onclick='editUrl(${JSON.stringify(url)})'>Edit</button>
+                                <button class="btn btn-danger" onclick='deleteUrl(${JSON.stringify(url)})'>Delete</button>
+                            </div>
+                        </div>
+                        <div class="url-stats">
+                            <div class="url-stat">
+                                <div class="label">Clicks</div>
+                                <div class="value">${url.currentUsage || 0}</div>
+                            </div>
+                            <div class="url-stat">
+                                <div class="label">Max Usage</div>
+                                <div class="value">${url.maxUsage > 0 ? url.maxUsage : 'Unlimited'}</div>
+                            </div>
+                            <div class="url-stat">
+                                <div class="label">Created</div>
+                                <div class="value">${new Date(url.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <div class="url-stat">
+                                <div class="label">Expiry</div>
+                                <div class="value">${url.expiry && new Date(url.expiry).getTime() > 0 ? new Date(url.expiry).toLocaleDateString() : 'Never'}</div>
+                            </div>
+                            <div class="url-stat">
+                                <div class="label">Status</div>
+                                <div class="value">${url.active ? '✅ Active' : '❌ Inactive'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Load URLs error:', error);
+                urlList.innerHTML = '<div class="error-message">Failed to load URLs. Please try again.</div>';
+            }
+        }
+
+        // Edit URL
+        function editUrl(url) {
+            document.getElementById('editManagementId').value = url.managementID;
+            document.getElementById('editShortUrl').value = url.shortURL;
+            document.getElementById('editOldUrl').value = url.originalURL;
+            document.getElementById('editOriginalUrl').value = url.originalURL;
+            document.getElementById('editExpiryDate').value = url.expiry ? new Date(url.expiry).toISOString().slice(0, 16) : '';
+            document.getElementById('editMaxUsage').value = url.maxUsage || '';
+            document.getElementById('editActiveToggle').checked = url.active;
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function handleEditUrl(e) {
+            e.preventDefault();
+
+            const managementID = document.getElementById('editManagementId').value;
+            const updateData = {
+                originalURL: document.getElementById('editOldUrl').value,
+                shortURL: document.getElementById('editShortUrl').value,
+                newOriginalURL: document.getElementById('editOriginalUrl').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/shorten/${managementID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('URL updated successfully!');
+                    closeEditModal();
+                    loadUserUrls();
+                } else {
+                    showError('editError', data.error || 'Failed to update URL');
+                }
+            } catch (error) {
+                showError('editError', 'Network error. Please try again.');
+            }
+        }
+
+        // Delete URL
+        async function deleteUrl(url) {
+            if (!confirm('Are you sure you want to delete this URL?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/shorten/${url.managementID}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        originalURL: url.originalURL,
+                        shortURL: url.shortURL
+                    })
+                });
+
+                if (response.ok) {
+                    alert('URL deleted successfully!');
+                    loadUserUrls();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to delete URL');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Copy URL
+        function copyUrl(shortUrl) {
+            const fullUrl = `${API_BASE}/${shortUrl}`;
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                alert('URL copied to clipboard!');
+            });
+        }
+
+        // QR Code
+        function generateQR(shortUrl) {
+            const qrUrl = `${API_BASE}/qr/${shortUrl}?size=512`;
+            window.open(qrUrl, '_blank');
+        }
+
+        // Error/Success Messages
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+            setTimeout(() => element.classList.add('hidden'), 5000);
+        }
+
+        function showSuccess(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+            setTimeout(() => element.classList.add('hidden'), 5000);
+        }
+    </script>
+</body>
+</html>

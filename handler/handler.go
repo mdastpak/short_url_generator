@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"short-url-generator/cache"
 	"short-url-generator/config"
+	"short-url-generator/middleware"
 	"short-url-generator/model"
 	"short-url-generator/security"
 	"short-url-generator/utils"
@@ -284,6 +285,7 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		ManagementID: uuid.New().String(), // Generate UUID v4 for management operations
 		OriginalURL:  input.OriginalURL,
 		CreatedAt:    time.Now(),
+		UserID:       middleware.GetUserID(r), // Associate URL with user if authenticated (empty if not)
 	}
 
 	// Parse expiry if provided

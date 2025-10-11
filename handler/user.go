@@ -403,6 +403,10 @@ func (uh *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ErrorResponse "Invalid or expired refresh token"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/auth/refresh [post]
+func (uh *UserHandler) ServeUserPanel(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "handler/user_panel.html")
+}
+
 func (uh *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req model.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -501,4 +505,89 @@ func (uh *UserHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 	SendJSONSuccess(w, http.StatusOK, map[string]string{
 		"message": "Verification code sent. Please check your email.",
 	})
+}
+
+// GetUserURLs handles GET /api/user/urls
+// @Summary Get all URLs for authenticated user
+// @Description Retrieve all short URLs created by the authenticated user
+// @Tags User
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "List of user's URLs"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/user/urls [get]
+func (uh *UserHandler) GetUserURLs(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	// Get userID from context (set by auth middleware)
+	userID := r.Context().Value("userID")
+	if userID == nil {
+		SendJSONError(w, http.StatusUnauthorized, errors.New("user not authenticated"), "")
+		return
+	}
+
+	userIDStr := userID.(string)
+
+	// Get all URL keys from Redis
+	keys, err := uh.redis.Keys(ctx, "*").Result()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get URL keys")
+		SendJSONError(w, http.StatusInternalServerError, err, "Failed to fetch URLs")
+		return
+	}
+
+	// Filter URLs belonging to this user
+	var userURLs []model.URL
+	var totalClicks int64
+	var activeCount int
+	var scheduledCount int
+
+	for _, key := range keys {
+		// Skip non-URL keys (otp, user, logs, etc.)
+		if strings.HasPrefix(key, "otp:") || strings.HasPrefix(key, "user:") ||
+			strings.HasPrefix(key, "logs:") || strings.HasPrefix(key, "url_index") ||
+			strings.HasPrefix(key, "management_index") || strings.HasPrefix(key, "security:") ||
+			key == "admin_api_key" || key == "malicious_urls" || key == "blocked_ips" ||
+			strings.HasSuffix(key, "_urls") {
+			continue
+		}
+
+		// Get URL data
+		urlData, err := uh.redis.Get(ctx, key).Bytes()
+		if err != nil {
+			continue
+		}
+
+		var urlObj model.URL
+		if err := json.Unmarshal(urlData, &urlObj); err != nil {
+			continue
+		}
+
+		// Check if URL belongs to this user
+		if urlObj.UserID == userIDStr {
+			userURLs = append(userURLs, urlObj)
+			totalClicks += int64(urlObj.CurrentUsage)
+
+			if urlObj.Active {
+				activeCount++
+			}
+
+			if !urlObj.ScheduledStart.IsZero() || !urlObj.ScheduledEnd.IsZero() {
+				scheduledCount++
+			}
+		}
+	}
+
+	// Calculate stats
+	stats := map[string]interface{}{
+		"totalUrls":     len(userURLs),
+		"activeUrls":    activeCount,
+		"totalClicks":   totalClicks,
+		"scheduledUrls": scheduledCount,
+		"urls":          userURLs,
+	}
+
+	SendJSONSuccess(w, http.StatusOK, stats)
 }

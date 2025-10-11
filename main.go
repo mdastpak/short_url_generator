@@ -152,12 +152,18 @@ func main() {
 	r.Use(rateLimiter.Limit)
 	r.Use(botProtection.Protect) // Bot detection middleware
 
+	// Create user auth middleware
+	userAuth := middleware.NewUserAuth(jwtManager)
+
 	// Register routes
 	r.HandleFunc("/health", urlHandler.HealthCheck).Methods("GET")
 	r.HandleFunc("/cache/metrics", urlHandler.CacheMetrics).Methods("GET")
-	r.HandleFunc("/shorten", urlHandler.CreateShortURL).Methods("POST")
-	r.HandleFunc("/shorten/{managementID}", urlHandler.UpdateURL).Methods("PUT")
-	r.HandleFunc("/shorten/{managementID}", urlHandler.DeleteURL).Methods("DELETE")
+
+	// URL shortening with optional authentication (will associate with user if logged in)
+	r.Handle("/shorten", userAuth.Optional(http.HandlerFunc(urlHandler.CreateShortURL))).Methods("POST")
+	r.Handle("/shorten/{managementID}", userAuth.Optional(http.HandlerFunc(urlHandler.UpdateURL))).Methods("PUT")
+	r.Handle("/shorten/{managementID}", userAuth.Optional(http.HandlerFunc(urlHandler.DeleteURL))).Methods("DELETE")
+
 	r.HandleFunc("/qr/{shortURL}", urlHandler.GenerateQR).Methods("GET")      // QR code generation
 	r.HandleFunc("/preview/{shortURL}", urlHandler.ShowPreview).Methods("GET") // URL preview (anti-phishing)
 
@@ -168,9 +174,18 @@ func main() {
 	r.HandleFunc("/api/auth/refresh", userHandler.RefreshToken).Methods("POST")
 	r.HandleFunc("/api/auth/resend-otp", userHandler.ResendOTP).Methods("POST")
 
+	// Protected user routes (requires authentication)
+	userRouter := r.PathPrefix("/api/user").Subrouter()
+	userRouter.Use(userAuth.Protect)
+	userRouter.HandleFunc("/urls", userHandler.GetUserURLs).Methods("GET")
+
 	log.Info().
 		Bool("registration_enabled", cfg.UserFeatures.RegistrationEnabled).
 		Msg("User authentication routes configured")
+
+	// User panel (public - has login/register screens)
+	r.HandleFunc("/panel", userHandler.ServeUserPanel).Methods("GET")
+	r.HandleFunc("/", userHandler.ServeUserPanel).Methods("GET") // Root redirects to panel
 
 	// Admin dashboard (public - has login screen)
 	r.HandleFunc("/admin/dashboard", urlHandler.ServeDashboard).Methods("GET")
