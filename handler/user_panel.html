@@ -787,9 +787,9 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    accessToken = data.data.accessToken;
-                    refreshToken = data.data.refreshToken;
-                    userData = data.data.user;
+                    accessToken = data.accessToken;
+                    refreshToken = data.refreshToken;
+                    userData = data.user;
 
                     localStorage.setItem('accessToken', accessToken);
                     localStorage.setItem('refreshToken', refreshToken);
@@ -926,7 +926,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showSuccess('createUrlSuccess', `Short URL created: ${data.data.shortURL}`);
+                    showSuccess('createUrlSuccess', `Short URL created: ${data.shortURL}`);
                     document.getElementById('createUrlForm').reset();
                     document.getElementById('activeToggle').checked = true;
                     loadUserUrls();
@@ -960,7 +960,7 @@
                 }
 
                 const data = await response.json();
-                const stats = data.data;
+                const stats = data;
 
                 // Update stats
                 document.getElementById('totalUrls').textContent = stats.totalUrls || 0;
