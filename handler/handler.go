@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -185,10 +186,15 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	// Parse JSON request
 	var input struct {
-		OriginalURL string `json:"originalURL"`
-		CustomSlug  string `json:"customSlug"` // Optional custom slug
-		Expiry      string `json:"expiry"`
-		MaxUsage    int    `json:"maxUsage"`
+		OriginalURL    string `json:"originalURL"`
+		CustomSlug     string `json:"customSlug"`     // Optional custom slug
+		CustomDomain   string `json:"customDomain"`   // Optional custom domain
+		Expiry         string `json:"expiry"`
+		MaxUsage       int    `json:"maxUsage"`
+		ScheduledStart string `json:"scheduledStart"` // When URL becomes active
+		ScheduledEnd   string `json:"scheduledEnd"`   // When URL becomes inactive
+		Password       string `json:"password"`       // Password for protected URLs
+		Active         *bool  `json:"active"`         // Manual activation (pointer to distinguish false from not provided)
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -308,6 +314,51 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	// Parse max usage if provided
 	if input.MaxUsage > 0 {
 		url.MaxUsage = input.MaxUsage
+	}
+
+	// Set custom domain if provided
+	if input.CustomDomain != "" {
+		url.CustomDomain = input.CustomDomain
+	}
+
+	// Parse scheduled start if provided
+	if input.ScheduledStart != "" {
+		scheduledStart, err := time.Parse(time.RFC3339, input.ScheduledStart)
+		if err != nil {
+			log.Error().Err(err).Str("scheduledStart", input.ScheduledStart).Msg("Invalid scheduled start format")
+			SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled start time format (use RFC3339)")
+			return
+		}
+		url.ScheduledStart = scheduledStart
+	}
+
+	// Parse scheduled end if provided
+	if input.ScheduledEnd != "" {
+		scheduledEnd, err := time.Parse(time.RFC3339, input.ScheduledEnd)
+		if err != nil {
+			log.Error().Err(err).Str("scheduledEnd", input.ScheduledEnd).Msg("Invalid scheduled end format")
+			SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled end time format (use RFC3339)")
+			return
+		}
+		url.ScheduledEnd = scheduledEnd
+	}
+
+	// Hash password if provided
+	if input.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to hash password")
+			SendJSONError(w, http.StatusInternalServerError, err, "Failed to process password")
+			return
+		}
+		url.PasswordHash = string(hashedPassword)
+	}
+
+	// Set active status (default to true if not provided)
+	if input.Active != nil {
+		url.Active = *input.Active
+	} else {
+		url.Active = true // Default to active
 	}
 
 	// Determine short URL
