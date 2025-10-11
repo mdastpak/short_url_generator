@@ -302,6 +302,12 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 			SendJSONError(w, http.StatusBadRequest, err, "Invalid expiry time format (use RFC3339)")
 			return
 		}
+		// Validate expiry is not invalid (year < 1)
+		if expiry.Year() < 1 {
+			log.Warn().Time("expiry", expiry).Msg("Invalid expiry date (year < 1)")
+			SendJSONError(w, http.StatusBadRequest, errors.New("invalid expiry date"), "Expiry date is invalid")
+			return
+		}
 		// Validate expiry is in the future
 		if expiry.Before(time.Now()) {
 			log.Warn().Time("expiry", expiry).Msg("Expiry date is in the past")
@@ -329,6 +335,12 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 			SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled start time format (use RFC3339)")
 			return
 		}
+		// Validate scheduled start is not invalid (year < 1)
+		if scheduledStart.Year() < 1 {
+			log.Warn().Time("scheduledStart", scheduledStart).Msg("Invalid scheduled start date (year < 1)")
+			SendJSONError(w, http.StatusBadRequest, errors.New("invalid scheduled start date"), "Scheduled start date is invalid")
+			return
+		}
 		url.ScheduledStart = scheduledStart
 	}
 
@@ -338,6 +350,12 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error().Err(err).Str("scheduledEnd", input.ScheduledEnd).Msg("Invalid scheduled end format")
 			SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled end time format (use RFC3339)")
+			return
+		}
+		// Validate scheduled end is not invalid (year < 1)
+		if scheduledEnd.Year() < 1 {
+			log.Warn().Time("scheduledEnd", scheduledEnd).Msg("Invalid scheduled end date (year < 1)")
+			SendJSONError(w, http.StatusBadRequest, errors.New("invalid scheduled end date"), "Scheduled end date is invalid")
 			return
 		}
 		url.ScheduledEnd = scheduledEnd
@@ -531,6 +549,36 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 			h.cache.Set(shortURL, url, 1024)
 			log.Debug().Str("short_url", shortURL).Msg("Cached URL data")
 		}
+	}
+
+	// Check if URL is manually deactivated
+	if !url.Active {
+		log.Info().Str("short_url", shortURL).Msg("URL is inactive")
+		SendJSONError(w, http.StatusForbidden, errors.New("URL is inactive"), "This URL has been deactivated")
+		return
+	}
+
+	// Check scheduled start time
+	if !url.ScheduledStart.IsZero() && time.Now().Before(url.ScheduledStart) {
+		log.Info().
+			Str("short_url", shortURL).
+			Time("scheduled_start", url.ScheduledStart).
+			Time("now", time.Now()).
+			Msg("URL not yet active (scheduled)")
+		SendJSONError(w, http.StatusForbidden, errors.New("URL not yet active"),
+			fmt.Sprintf("This URL will become active at %s", url.ScheduledStart.Format(time.RFC3339)))
+		return
+	}
+
+	// Check scheduled end time
+	if !url.ScheduledEnd.IsZero() && time.Now().After(url.ScheduledEnd) {
+		log.Info().
+			Str("short_url", shortURL).
+			Time("scheduled_end", url.ScheduledEnd).
+			Time("now", time.Now()).
+			Msg("URL no longer active (schedule ended)")
+		SendJSONError(w, http.StatusGone, errors.New("URL schedule has ended"), "")
+		return
 	}
 
 	// Check expiry

@@ -606,8 +606,8 @@
                             <input type="datetime-local" id="expiryDate">
                         </div>
                         <div class="form-group">
-                            <label for="maxUsage">Max Usage (Optional)</label>
-                            <input type="number" id="maxUsage" placeholder="100" min="1">
+                            <label for="maxUsage">Max Usage (0 = Unlimited)</label>
+                            <input type="number" id="maxUsage" placeholder="0 for unlimited, or enter limit" min="0">
                         </div>
                     </div>
 
@@ -670,8 +670,8 @@
                         <input type="datetime-local" id="editExpiryDate">
                     </div>
                     <div class="form-group">
-                        <label for="editMaxUsage">Max Usage</label>
-                        <input type="number" id="editMaxUsage" min="1">
+                        <label for="editMaxUsage">Max Usage (0 = Unlimited)</label>
+                        <input type="number" id="editMaxUsage" min="0" placeholder="0 for unlimited">
                     </div>
                 </div>
 
@@ -1028,7 +1028,17 @@
             document.getElementById('editShortUrl').value = url.shortURL;
             document.getElementById('editOldUrl').value = url.originalURL;
             document.getElementById('editOriginalUrl').value = url.originalURL;
-            document.getElementById('editExpiryDate').value = url.expiry ? new Date(url.expiry).toISOString().slice(0, 16) : '';
+
+            // Convert UTC time to local time for datetime-local input
+            if (url.expiry) {
+                const utcDate = new Date(url.expiry);
+                // Subtract timezone offset to get local datetime string
+                const localDate = new Date(utcDate.getTime() - utcDate.getTimezoneOffset() * 60000);
+                document.getElementById('editExpiryDate').value = localDate.toISOString().slice(0, 16);
+            } else {
+                document.getElementById('editExpiryDate').value = '';
+            }
+
             document.getElementById('editMaxUsage').value = url.maxUsage || '';
             document.getElementById('editActiveToggle').checked = url.active;
 

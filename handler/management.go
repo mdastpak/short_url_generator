@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -59,7 +60,24 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var input UpdateURLRequest
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	// First, read the raw body to check for explicit null values
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		SendJSONError(w, http.StatusBadRequest, err, "Failed to read request body")
+		return
+	}
+
+	// Check if maxUsage is explicitly set to null (for unlimited usage)
+	var rawJSON map[string]interface{}
+	maxUsageExplicitlyNull := false
+	if err := json.Unmarshal(bodyBytes, &rawJSON); err == nil {
+		if val, exists := rawJSON["maxUsage"]; exists && val == nil {
+			maxUsageExplicitlyNull = true
+		}
+	}
+
+	// Now decode into the struct
+	if err := json.Unmarshal(bodyBytes, &input); err != nil {
 		SendJSONError(w, http.StatusBadRequest, err, "Invalid JSON format")
 		return
 	}
@@ -132,7 +150,11 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 		url.Active = *input.Active
 	}
 
-	if input.MaxUsage != nil {
+	// Handle maxUsage: explicit null means unlimited (0), number means that limit
+	if maxUsageExplicitlyNull {
+		url.MaxUsage = 0 // null = unlimited usage
+		log.Debug().Str("shortURL", input.ShortURL).Msg("Setting maxUsage to 0 (unlimited) from explicit null")
+	} else if input.MaxUsage != nil {
 		url.MaxUsage = *input.MaxUsage
 	}
 
@@ -150,7 +172,18 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 				SendJSONError(w, http.StatusBadRequest, err, "Invalid expiry time format (use RFC3339)")
 				return
 			}
-			url.Expiry = expiry
+			// Treat invalid dates (year 0000 or 0001) as "leave unchanged"
+			// This handles frontend sending placeholder dates like "0000-12-31T20:34:16.000Z"
+			if expiry.Year() <= 1 {
+				log.Debug().Str("expiry", *input.Expiry).Msg("Ignoring invalid placeholder expiry date")
+				// Don't update expiry field - leave it as is
+			} else if expiry.Before(time.Now()) {
+				SendJSONError(w, http.StatusBadRequest, errors.New("expiry date is in the past"),
+					"Expiry date must be in the future. Use empty string to remove expiry.")
+				return
+			} else {
+				url.Expiry = expiry
+			}
 		}
 	}
 
@@ -163,7 +196,13 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 				SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled start time format (use RFC3339)")
 				return
 			}
-			url.ScheduledStart = scheduledStart
+			// Treat invalid dates (year 0000 or 0001) as "leave unchanged"
+			if scheduledStart.Year() <= 1 {
+				log.Debug().Str("scheduledStart", *input.ScheduledStart).Msg("Ignoring invalid placeholder scheduled start date")
+				// Don't update scheduledStart field - leave it as is
+			} else {
+				url.ScheduledStart = scheduledStart
+			}
 		}
 	}
 
@@ -176,7 +215,13 @@ func (h *URLHandler) UpdateURL(w http.ResponseWriter, r *http.Request) {
 				SendJSONError(w, http.StatusBadRequest, err, "Invalid scheduled end time format (use RFC3339)")
 				return
 			}
-			url.ScheduledEnd = scheduledEnd
+			// Treat invalid dates (year 0000 or 0001) as "leave unchanged"
+			if scheduledEnd.Year() <= 1 {
+				log.Debug().Str("scheduledEnd", *input.ScheduledEnd).Msg("Ignoring invalid placeholder scheduled end date")
+				// Don't update scheduledEnd field - leave it as is
+			} else {
+				url.ScheduledEnd = scheduledEnd
+			}
 		}
 	}
 

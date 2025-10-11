@@ -55,6 +55,7 @@ logs/
 tmp/
 temp/
 *.tmp
+nul
 
 # OS files
 Thumbs.db
