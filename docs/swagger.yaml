@@ -298,6 +298,12 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
+  model.SetPasswordRequest:
+    properties:
+      password:
+        example: MySecurePassword123
+        type: string
+    type: object
   model.SetSecurityPhraseRequest:
     properties:
       securityPhrase:
@@ -506,6 +512,12 @@ definitions:
         type: string
       otp:
         example: "123456"
+        type: string
+    type: object
+  model.VerifyPasswordRequest:
+    properties:
+      password:
+        example: MySecurePassword123
         type: string
     type: object
 host: localhost:8080
@@ -1224,6 +1236,95 @@ paths:
       summary: Get URL access logs
       tags:
       - User
+  /api/user/url/{shortURL}/password:
+    delete:
+      description: Remove password protection from a short URL (authenticated users
+        only)
+      parameters:
+      - description: Short URL
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password removed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Not authorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove URL password
+      tags:
+      - User
+    put:
+      consumes:
+      - application/json
+      description: Set or update password protection for a short URL (authenticated
+        users only)
+      parameters:
+      - description: Short URL
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      - description: Password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password set successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Not authorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set or update URL password
+      tags:
+      - User
   /api/user/urls:
     get:
       description: Retrieve all short URLs created by the authenticated user
@@ -1283,6 +1384,29 @@ paths:
       summary: Health check
       tags:
       - System
+  /password/{shortURL}:
+    get:
+      description: Display password prompt page for password-protected URLs
+      parameters:
+      - description: Short URL
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML password prompt page
+          schema:
+            type: string
+        "404":
+          description: URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Show password prompt page
+      tags:
+      - URLs
   /preview/{shortURL}:
     get:
       description: Displays a preview page showing the destination URL before redirecting
@@ -1502,6 +1626,55 @@ paths:
       summary: Update URL destination
       tags:
       - Management
+  /verify-password/{shortURL}:
+    post:
+      consumes:
+      - application/json
+      description: Verify password for password-protected short URL and set session
+        cookie
+      parameters:
+      - description: Short URL
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      - description: Password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.VerifyPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password verified, redirect URL provided
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Invalid password
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "429":
+          description: Too many attempts
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Verify password for protected URL
+      tags:
+      - URLs
 schemes:
 - http
 - https

@@ -189,10 +189,16 @@ func main() {
 	userRouter.HandleFunc("/activity", userHandler.GetActivityLogs).Methods("GET")
 	userRouter.HandleFunc("/analytics", userHandler.GetUserAnalytics).Methods("GET")
 	userRouter.HandleFunc("/url/{shortURL}/logs", userHandler.GetURLAccessLogs).Methods("GET")
+	userRouter.HandleFunc("/url/{shortURL}/password", userHandler.SetURLPassword).Methods("PUT")
+	userRouter.HandleFunc("/url/{shortURL}/password", userHandler.RemoveURLPassword).Methods("DELETE")
 
 	log.Info().
 		Bool("registration_enabled", cfg.UserFeatures.RegistrationEnabled).
 		Msg("User authentication routes configured")
+
+	// Password protection routes (public)
+	r.HandleFunc("/password/{shortURL}", urlHandler.ShowPasswordPrompt).Methods("GET")
+	r.HandleFunc("/verify-password/{shortURL}", urlHandler.VerifyPassword).Methods("POST")
 
 	// User panel (public - has login/register screens)
 	r.HandleFunc("/panel", userHandler.ServeUserPanel).Methods("GET")

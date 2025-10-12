@@ -558,6 +558,30 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if password-protected and validate session
+	if url.PasswordHash != "" {
+		// Check for valid session cookie
+		cookieName := fmt.Sprintf("url_access_%s", shortURL)
+		cookie, err := r.Cookie(cookieName)
+
+		validSession := false
+		if err == nil && cookie.Value != "" {
+			// Verify session exists in Redis
+			sessionKey := fmt.Sprintf("password_session:%s:%s", shortURL, cookie.Value)
+			exists, _ := h.redis.Exists(ctx, sessionKey).Result()
+			validSession = exists > 0
+		}
+
+		if !validSession {
+			// No valid session, redirect to password prompt
+			log.Info().Str("short_url", shortURL).Msg("Password required, redirecting to prompt")
+			http.Redirect(w, r, "/password/"+shortURL, http.StatusFound)
+			return
+		}
+		// Valid session exists, continue with redirect
+		log.Debug().Str("short_url", shortURL).Msg("Valid password session found")
+	}
+
 	// Check scheduled start time
 	if !url.ScheduledStart.IsZero() && time.Now().Before(url.ScheduledStart) {
 		log.Info().

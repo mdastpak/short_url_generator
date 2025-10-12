@@ -35,3 +35,13 @@ type ChangePasswordRequest struct {
 type SetSecurityPhraseRequest struct {
 	SecurityPhrase string `json:"securityPhrase" example:"Purple Elephant 2025"`
 }
+
+// VerifyPasswordRequest represents password verification for protected URLs
+type VerifyPasswordRequest struct {
+	Password string `json:"password" example:"MySecurePassword123"`
+}
+
+// SetPasswordRequest represents setting password protection on a URL
+type SetPasswordRequest struct {
+	Password string `json:"password" example:"MySecurePassword123"`
+}
