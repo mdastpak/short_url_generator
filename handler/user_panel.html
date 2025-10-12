@@ -606,7 +606,7 @@
                             <input type="datetime-local" id="expiryDate">
                         </div>
                         <div class="form-group">
-                            <label for="maxUsage">Max Usage (0 = Unlimited)</label>
+                            <label for="maxUsage">Max Usage <span style="font-weight: normal; font-size: 12px;">(0 = Unlimited)</span></label>
                             <input type="number" id="maxUsage" placeholder="0 for unlimited, or enter limit" min="0">
                         </div>
                     </div>
@@ -670,9 +670,14 @@
                         <input type="datetime-local" id="editExpiryDate">
                     </div>
                     <div class="form-group">
-                        <label for="editMaxUsage">Max Usage (0 = Unlimited)</label>
+                        <label for="editMaxUsage">Max Usage <span style="font-weight: normal; font-size: 12px;">(0 = Unlimited)</span></label>
                         <input type="number" id="editMaxUsage" min="0" placeholder="0 for unlimited">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editPassword">Password <span style="font-weight: normal; font-size: 12px;">(leave empty to keep current, enter new to change, or clear to remove)</span></label>
+                    <input type="password" id="editPassword" placeholder="New password or leave empty">
                 </div>
 
                 <div class="form-group">
@@ -1053,9 +1058,12 @@
             e.preventDefault();
 
             const managementID = document.getElementById('editManagementId').value;
+            const shortURL = document.getElementById('editShortUrl').value;
+            const password = document.getElementById('editPassword').value;
+
             const updateData = {
                 originalURL: document.getElementById('editOldUrl').value,
-                shortURL: document.getElementById('editShortUrl').value,
+                shortURL: shortURL,
                 newOriginalURL: document.getElementById('editOriginalUrl').value,
                 expiry: document.getElementById('editExpiryDate').value ? new Date(document.getElementById('editExpiryDate').value).toISOString() : null,
                 maxUsage: document.getElementById('editMaxUsage').value ? parseInt(document.getElementById('editMaxUsage').value) : null,
@@ -1063,6 +1071,7 @@
             };
 
             try {
+                // Update main URL fields
                 const response = await fetch(`${API_BASE}/shorten/${managementID}`, {
                     method: 'PUT',
                     headers: {
@@ -1074,13 +1083,47 @@
 
                 const data = await response.json();
 
-                if (response.ok) {
-                    alert('URL updated successfully!');
-                    closeEditModal();
-                    loadUserUrls();
-                } else {
+                if (!response.ok) {
                     showError('editError', data.error || 'Failed to update URL');
+                    return;
                 }
+
+                // Handle password update if provided
+                if (password) {
+                    // Set or update password
+                    const passwordResponse = await fetch(`${API_BASE}/api/user/url/${shortURL}/password`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ password })
+                    });
+
+                    if (!passwordResponse.ok) {
+                        const passwordData = await passwordResponse.json();
+                        showError('editError', passwordData.error || 'URL updated but failed to set password');
+                        return;
+                    }
+                } else if (password === '') {
+                    // Empty password means remove protection (only if explicitly cleared)
+                    const passwordResponse = await fetch(`${API_BASE}/api/user/url/${shortURL}/password`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (!passwordResponse.ok && passwordResponse.status !== 404) {
+                        const passwordData = await passwordResponse.json();
+                        showError('editError', passwordData.error || 'URL updated but failed to remove password');
+                        return;
+                    }
+                }
+
+                alert('URL updated successfully!');
+                closeEditModal();
+                loadUserUrls();
             } catch (error) {
                 showError('editError', 'Network error. Please try again.');
             }
