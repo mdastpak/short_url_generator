@@ -4,38 +4,51 @@ import "time"
 
 // User represents a registered user (for internal storage)
 type User struct {
-	ID           string    `json:"id"`           // UUID
-	Email        string    `json:"email"`        // Email address (unique)
-	PasswordHash string    `json:"passwordHash"` // Bcrypt password hash (stored but not exposed in API)
-	Verified     bool      `json:"verified"`     // Email verification status
-	CreatedAt    time.Time `json:"createdAt"`    // Registration timestamp
-	LastLoginAt  time.Time `json:"lastLoginAt"`  // Last login timestamp
-	Active       bool      `json:"active"`       // Account status (can be disabled by admin)
-	CustomDomain string    `json:"customDomain"` // Optional custom domain for this user
+	ID             string    `json:"id"`             // UUID
+	Email          string    `json:"email"`          // Email address (unique)
+	PasswordHash   string    `json:"passwordHash"`   // Bcrypt password hash (stored but not exposed in API)
+	SecurityPhrase string    `json:"securityPhrase"` // User's security phrase for email verification (anti-phishing)
+	Verified       bool      `json:"verified"`       // Email verification status
+	CreatedAt      time.Time `json:"createdAt"`      // Registration timestamp
+	LastLoginAt    time.Time `json:"lastLoginAt"`    // Last login timestamp
+	Active         bool      `json:"active"`         // Account status (can be disabled by admin)
+	CustomDomain   string    `json:"customDomain"`   // Optional custom domain for this user
 }
 
 // UserResponse represents user data for API responses (excludes sensitive fields)
 type UserResponse struct {
-	ID           string    `json:"id"`
-	Email        string    `json:"email"`
-	Verified     bool      `json:"verified"`
-	CreatedAt    time.Time `json:"createdAt"`
-	LastLoginAt  time.Time `json:"lastLoginAt"`
-	Active       bool      `json:"active"`
-	CustomDomain string    `json:"customDomain"`
+	ID             string    `json:"id"`
+	Email          string    `json:"email"`
+	SecurityPhrase string    `json:"securityPhrase"` // User's security phrase (safe to expose)
+	Verified       bool      `json:"verified"`
+	CreatedAt      time.Time `json:"createdAt"`
+	LastLoginAt    time.Time `json:"lastLoginAt"`
+	Active         bool      `json:"active"`
+	CustomDomain   string    `json:"customDomain"`
 }
 
 // ToResponse converts User to UserResponse (removes sensitive data)
 func (u *User) ToResponse() UserResponse {
 	return UserResponse{
-		ID:           u.ID,
-		Email:        u.Email,
-		Verified:     u.Verified,
-		CreatedAt:    u.CreatedAt,
-		LastLoginAt:  u.LastLoginAt,
-		Active:       u.Active,
-		CustomDomain: u.CustomDomain,
+		ID:             u.ID,
+		Email:          u.Email,
+		SecurityPhrase: u.SecurityPhrase,
+		Verified:       u.Verified,
+		CreatedAt:      u.CreatedAt,
+		LastLoginAt:    u.LastLoginAt,
+		Active:         u.Active,
+		CustomDomain:   u.CustomDomain,
 	}
+}
+
+// GetEmail returns the user's email (for email service)
+func (u *User) GetEmail() string {
+	return u.Email
+}
+
+// GetSecurityPhrase returns the user's security phrase (for email service)
+func (u *User) GetSecurityPhrase() string {
+	return u.SecurityPhrase
 }
 
 // RegisterRequest represents user registration data

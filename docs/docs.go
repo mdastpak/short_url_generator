@@ -342,6 +342,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/auth/forgot-password": {
+            "post": {
+                "description": "Send password reset magic link to email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Request password reset",
+                "parameters": [
+                    {
+                        "description": "Email address",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reset link sent message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/login": {
             "post": {
                 "description": "Login with email and password, returns access and refresh tokens",
@@ -568,6 +623,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/auth/reset-password": {
+            "get": {
+                "description": "Check if reset token is valid and not expired",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Validate password reset token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset token (UUID)",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token valid",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid token format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Token not found or expired",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "410": {
+                        "description": "Token already used",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Reset user password using reset token from email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Reset password with token",
+                "parameters": [
+                    {
+                        "description": "Reset token and new password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset successful",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or weak password",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Token not found or expired",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "410": {
+                        "description": "Token already used",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/verify-otp": {
             "post": {
                 "description": "Verify email with OTP code sent during registration",
@@ -610,6 +772,297 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "OTP not found or expired",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/analytics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive analytics for authenticated user including click trends, device breakdown, and top URLs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get user analytics",
+                "responses": {
+                    "200": {
+                        "description": "User analytics data",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserAnalytics"
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/change-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change user password (requires current password)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Change password",
+                "parameters": [
+                    {
+                        "description": "Current and new password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password changed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or weak password",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid current password or not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get current user's profile information",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "User profile",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/security-phrase": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Set or update user's security phrase for email verification",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Set security phrase",
+                "parameters": [
+                    {
+                        "description": "Security phrase (3-50 characters)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.SetSecurityPhraseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security phrase updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid phrase",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/url/{shortURL}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed access logs for a specific short URL",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get URL access logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Short URL",
+                        "name": "shortURL",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Access logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "URL does not belong to user",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "URL not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/urls": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all short URLs created by the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get all URLs for authenticated user",
+                "responses": {
+                    "200": {
+                        "description": "List of user's URLs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -1238,6 +1691,36 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ActivityLog": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "Type of action (see ActivityType constants)",
+                    "type": "string"
+                },
+                "details": {
+                    "description": "Additional action-specific details",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "ip": {
+                    "description": "IP address of the user",
+                    "type": "string"
+                },
+                "location": {
+                    "description": "Optional: City, Country (from GeoIP)",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "description": "When the action occurred",
+                    "type": "string"
+                },
+                "userAgent": {
+                    "description": "Browser/device user agent",
+                    "type": "string"
+                }
+            }
+        },
         "model.CacheMetricsResponse": {
             "description": "Cache performance metrics including hit rate and evictions",
             "type": "object",
@@ -1265,6 +1748,19 @@ const docTemplate = `{
                 "misses": {
                     "type": "integer",
                     "example": 56
+                }
+            }
+        },
+        "model.ChangePasswordRequest": {
+            "type": "object",
+            "properties": {
+                "currentPassword": {
+                    "type": "string",
+                    "example": "OldPassword123"
+                },
+                "newPassword": {
+                    "type": "string",
+                    "example": "NewPassword123"
                 }
             }
         },
@@ -1359,6 +1855,15 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ForgotPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                }
+            }
+        },
         "model.HealthResponse": {
             "description": "Health check response showing service status",
             "type": "object",
@@ -1421,6 +1926,28 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ResetPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "newPassword": {
+                    "type": "string",
+                    "example": "NewSecurePassword123"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "model.SetSecurityPhraseRequest": {
+            "type": "object",
+            "properties": {
+                "securityPhrase": {
+                    "type": "string",
+                    "example": "Purple Elephant 2025"
+                }
+            }
+        },
         "model.SlugConflictResponse": {
             "description": "Response when requested custom slug is already in use",
             "type": "object",
@@ -1448,6 +1975,19 @@ const docTemplate = `{
                 "slug": {
                     "type": "string",
                     "example": "my-link-2"
+                }
+            }
+        },
+        "model.TimeSeriesPoint": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "description": "Date in \"YYYY-MM-DD\" format",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Number of clicks on this date",
+                    "type": "integer"
                 }
             }
         },
@@ -1529,6 +2069,27 @@ const docTemplate = `{
                 }
             }
         },
+        "model.URLStats": {
+            "type": "object",
+            "properties": {
+                "clicks": {
+                    "description": "Total number of clicks",
+                    "type": "integer"
+                },
+                "lastAccessed": {
+                    "description": "Last access timestamp (ISO 8601)",
+                    "type": "string"
+                },
+                "originalURL": {
+                    "description": "Original destination URL",
+                    "type": "string"
+                },
+                "shortURL": {
+                    "description": "Short URL identifier",
+                    "type": "string"
+                }
+            }
+        },
         "model.UpdateRequest": {
             "description": "Request body for updating the destination of a short URL",
             "type": "object",
@@ -1582,6 +2143,58 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UserAnalytics": {
+            "type": "object",
+            "properties": {
+                "activeUrls": {
+                    "description": "Number of active URLs",
+                    "type": "integer"
+                },
+                "browserBreakdown": {
+                    "description": "Clicks by browser",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "clicksByDay": {
+                    "description": "Time-series data for clicks",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TimeSeriesPoint"
+                    }
+                },
+                "deviceBreakdown": {
+                    "description": "Clicks by device type (mobile/desktop/tablet)",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "recentActivity": {
+                    "description": "Recent user activities",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ActivityLog"
+                    }
+                },
+                "topUrls": {
+                    "description": "Top performing URLs by clicks",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.URLStats"
+                    }
+                },
+                "totalClicks": {
+                    "description": "Total clicks across all URLs",
+                    "type": "integer"
+                },
+                "totalUrls": {
+                    "description": "Total number of URLs created",
+                    "type": "integer"
+                }
+            }
+        },
         "model.UserResponse": {
             "type": "object",
             "properties": {
@@ -1601,6 +2214,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "lastLoginAt": {
+                    "type": "string"
+                },
+                "securityPhrase": {
+                    "description": "User's security phrase (safe to expose)",
                     "type": "string"
                 },
                 "verified": {

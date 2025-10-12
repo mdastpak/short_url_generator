@@ -174,10 +174,21 @@ func main() {
 	r.HandleFunc("/api/auth/refresh", userHandler.RefreshToken).Methods("POST")
 	r.HandleFunc("/api/auth/resend-otp", userHandler.ResendOTP).Methods("POST")
 
+	// Password reset routes (public)
+	r.HandleFunc("/api/auth/forgot-password", userHandler.ForgotPassword).Methods("POST")
+	r.HandleFunc("/api/auth/reset-password", userHandler.ValidateResetToken).Methods("GET")
+	r.HandleFunc("/api/auth/reset-password", userHandler.ResetPassword).Methods("POST")
+
 	// Protected user routes (requires authentication)
 	userRouter := r.PathPrefix("/api/user").Subrouter()
 	userRouter.Use(userAuth.Protect)
 	userRouter.HandleFunc("/urls", userHandler.GetUserURLs).Methods("GET")
+	userRouter.HandleFunc("/profile", userHandler.GetProfile).Methods("GET")
+	userRouter.HandleFunc("/change-password", userHandler.ChangePassword).Methods("POST")
+	userRouter.HandleFunc("/security-phrase", userHandler.SetSecurityPhrase).Methods("PUT")
+	userRouter.HandleFunc("/activity", userHandler.GetActivityLogs).Methods("GET")
+	userRouter.HandleFunc("/analytics", userHandler.GetUserAnalytics).Methods("GET")
+	userRouter.HandleFunc("/url/{shortURL}/logs", userHandler.GetURLAccessLogs).Methods("GET")
 
 	log.Info().
 		Bool("registration_enabled", cfg.UserFeatures.RegistrationEnabled).

@@ -20,7 +20,12 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 
 - `main.go`: Entry point with dependency injection, middleware setup, Swagger documentation, and graceful shutdown
 - `config/`: Viper-based configuration with environment variable overrides and defaults
-- `model/`: Data models for `URL`, `URLLog`, and Swagger request/response structs
+- `model/`: Data models for `URL`, `URLLog`, `User`, `OTP`, `ResetToken`, `ActivityLog`, `UserAnalytics`, and Swagger request/response structs
+  - `url.go`: URL and URLLog models
+  - `user.go`: User and UserResponse models
+  - `auth.go`: ResetToken, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, SetSecurityPhraseRequest
+  - `activity.go`: ActivityLog model and activity type constants
+  - `analytics.go`: UserAnalytics, TimeSeriesPoint, URLStats models
 - `handler/`: HTTP handlers using dependency injection pattern
   - `handler.go`: Main URLHandler struct with CreateShortURL, RedirectURL, HealthCheck, and CacheMetrics methods
   - `management.go`: UpdateURL and DeleteURL handlers with multi-factor security validation
@@ -29,7 +34,9 @@ A production-ready URL shortening service built with Go that uses Redis for pers
   - `admin.go`: Admin API endpoints (stats, URL list, detail, bulk delete, system health)
   - `admin_dashboard.go`: Serves embedded admin dashboard HTML
   - `admin_dashboard.html`: Single-page admin UI with embedded CSS/JS
-  - `user.go`: User authentication handlers (register, login, OTP verification, get user URLs)
+  - `user.go`: User authentication handlers (register, login, OTP, password reset, profile management)
+  - `activity.go`: Activity logging handlers (log activities, get activity logs with pagination)
+  - `analytics.go`: Analytics handlers (user analytics, URL access logs, device/browser breakdown)
   - `user_panel.html`: Single-page user panel UI with login/register/dashboard (dark mode support)
   - `response.go`: Standardized JSON response helpers
 - `cache/`: Ristretto-based in-memory cache with TTL and metrics
@@ -57,6 +64,11 @@ A production-ready URL shortening service built with Go that uses Redis for pers
 - **Expired URLs**: Moved to `expired_urls` list when accessed after expiry
 - **Used-up URLs**: Moved to `usedup_urls` list when usage limit exceeded
 - **Access Logs**: Stored in `logs:{shortURL}` lists as JSON-marshaled `URLLog` entries
+- **Users**: Stored as JSON-marshaled `User` structs in `user:{userID}` keys
+- **Email Index**: Hash `user:email:{email}` → `userID` for email-based lookup
+- **Reset Tokens**: Stored in `reset_token:{token}` keys with 30-minute TTL
+- **Reset Rate Limit**: Counter in `reset_attempts:{email}` with 1-hour expiration (max 3 attempts)
+- **Activity Logs**: Stored in `activity:{userID}` lists (last 1000 entries, 90-day retention)
 
 ### URL Generation & Validation
 
@@ -192,13 +204,79 @@ The service includes a complete user authentication system with JWT tokens and a
 - `POST /api/auth/login` - Login and get JWT tokens
 - `POST /api/auth/refresh` - Refresh access token
 - `POST /api/auth/resend-otp` - Resend verification code
+- `POST /api/auth/forgot-password` - Request password reset magic link
+- `GET /api/auth/reset-password?token=xxx` - Validate reset token
+- `POST /api/auth/reset-password` - Reset password with token
 - `GET /api/user/urls` - Get authenticated user's URLs (protected)
+- `GET /api/user/profile` - Get user profile (protected)
+- `POST /api/user/change-password` - Change password (protected)
+- `PUT /api/user/security-phrase` - Set security phrase (protected)
+- `GET /api/user/activity` - Get user activity logs with pagination (protected)
+- `GET /api/user/analytics` - Get comprehensive analytics (protected)
+- `GET /api/user/url/{shortURL}/logs` - Get access logs for specific URL (protected)
 
 **Optional Authentication for URL Creation:**
 - `/shorten` endpoint supports optional JWT authentication
 - If Authorization header present and valid → URL associated with user
 - If no auth or invalid token → URL created anonymously
 - No error on invalid token (graceful degradation)
+
+### User Profile Features
+
+**Password Management:**
+- **Magic Link Reset**: Password reset via UUID token sent to email (30-minute expiration, single-use)
+- **Rate Limiting**: Maximum 3 password reset requests per hour per email
+- **Manual Change**: Change password with current password verification
+- **Security Alerts**: Email notifications on password changes with IP and device info
+
+**Security Phrases (Anti-Phishing):**
+- User-defined 3-50 character phrases displayed in all emails
+- Sanitized to prevent XSS (HTML tags and control characters removed)
+- Helps users verify legitimate emails from the service
+- Default: "(Not set - Please set a security phrase in your profile)"
+
+**Activity Logging:**
+- Comprehensive logging of all user actions (login, password changes, URL operations)
+- Stored in Redis lists with 90-day retention (last 1000 activities per user)
+- Includes timestamp, action type, IP address, user agent, and custom details
+- Supports pagination and filtering by action type
+- Activity types: `user_login`, `password_changed`, `security_phrase_set`, `url_created`, `url_updated`, `url_deleted`, `login_failed`
+
+**Analytics Dashboard:**
+- **Click Trends**: 30-day time series of URL accesses
+- **Device Breakdown**: Mobile, Desktop, Tablet, Bot categorization
+- **Browser Breakdown**: Chrome, Firefox, Safari, Edge, Opera, Other, Bot
+- **Top URLs**: Top 10 most-clicked short URLs with last accessed time
+- **Recent Activity**: Last 10 user actions
+- **URL-Specific Logs**: Detailed access logs per short URL (IP, user agent, timestamp)
+
+**Data Structures (handler/activity.go, handler/analytics.go):**
+```go
+type ActivityLog struct {
+	Timestamp time.Time              `json:"timestamp"`
+	Action    string                 `json:"action"`
+	Details   map[string]interface{} `json:"details"`
+	IP        string                 `json:"ip"`
+	UserAgent string                 `json:"userAgent"`
+	Location  string                 `json:"location"` // Reserved for future geolocation
+}
+
+type UserAnalytics struct {
+	TotalURLs        int                `json:"totalUrls"`
+	ActiveURLs       int                `json:"activeUrls"`
+	TotalClicks      int64              `json:"totalClicks"`
+	ClicksByDay      []TimeSeriesPoint  `json:"clicksByDay"`
+	DeviceBreakdown  map[string]int     `json:"deviceBreakdown"`
+	BrowserBreakdown map[string]int     `json:"browserBreakdown"`
+	TopURLs          []URLStats         `json:"topUrls"`
+	RecentActivity   []ActivityLog      `json:"recentActivity"`
+}
+```
+
+**Email Templates (email/email.go):**
+- **SendPasswordReset**: Magic link with security phrase banner, 30-minute expiration notice
+- **SendPasswordChangeAlert**: Security alert with IP, device, and security phrase verification
+- Both emails include prominent security phrase display for anti-phishing
 
 ## Common Commands
 

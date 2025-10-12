@@ -120,6 +120,28 @@ definitions:
           $ref: '#/definitions/handler.URLListItem'
         type: array
     type: object
+  model.ActivityLog:
+    properties:
+      action:
+        description: Type of action (see ActivityType constants)
+        type: string
+      details:
+        additionalProperties: true
+        description: Additional action-specific details
+        type: object
+      ip:
+        description: IP address of the user
+        type: string
+      location:
+        description: 'Optional: City, Country (from GeoIP)'
+        type: string
+      timestamp:
+        description: When the action occurred
+        type: string
+      userAgent:
+        description: Browser/device user agent
+        type: string
+    type: object
   model.CacheMetricsResponse:
     description: Cache performance metrics including hit rate and evictions
     properties:
@@ -141,6 +163,15 @@ definitions:
       misses:
         example: 56
         type: integer
+    type: object
+  model.ChangePasswordRequest:
+    properties:
+      currentPassword:
+        example: OldPassword123
+        type: string
+      newPassword:
+        example: NewPassword123
+        type: string
     type: object
   model.CreateRequest:
     description: Request body for creating a new short URL. Expiry time must be in
@@ -210,6 +241,12 @@ definitions:
         example: Invalid URL format
         type: string
     type: object
+  model.ForgotPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
   model.HealthResponse:
     description: Health check response showing service status
     properties:
@@ -252,6 +289,21 @@ definitions:
         example: SecurePassword123
         type: string
     type: object
+  model.ResetPasswordRequest:
+    properties:
+      newPassword:
+        example: NewSecurePassword123
+        type: string
+      token:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  model.SetSecurityPhraseRequest:
+    properties:
+      securityPhrase:
+        example: Purple Elephant 2025
+        type: string
+    type: object
   model.SlugConflictResponse:
     description: Response when requested custom slug is already in use
     properties:
@@ -272,6 +324,15 @@ definitions:
       slug:
         example: my-link-2
         type: string
+    type: object
+  model.TimeSeriesPoint:
+    properties:
+      date:
+        description: Date in "YYYY-MM-DD" format
+        type: string
+      value:
+        description: Number of clicks on this date
+        type: integer
     type: object
   model.URL:
     properties:
@@ -327,6 +388,21 @@ definitions:
       userAgent:
         type: string
     type: object
+  model.URLStats:
+    properties:
+      clicks:
+        description: Total number of clicks
+        type: integer
+      lastAccessed:
+        description: Last access timestamp (ISO 8601)
+        type: string
+      originalURL:
+        description: Original destination URL
+        type: string
+      shortURL:
+        description: Short URL identifier
+        type: string
+    type: object
   model.UpdateRequest:
     description: Request body for updating the destination of a short URL
     properties:
@@ -366,6 +442,43 @@ definitions:
         example: "2024-01-15T11:00:00+03:30"
         type: string
     type: object
+  model.UserAnalytics:
+    properties:
+      activeUrls:
+        description: Number of active URLs
+        type: integer
+      browserBreakdown:
+        additionalProperties:
+          type: integer
+        description: Clicks by browser
+        type: object
+      clicksByDay:
+        description: Time-series data for clicks
+        items:
+          $ref: '#/definitions/model.TimeSeriesPoint'
+        type: array
+      deviceBreakdown:
+        additionalProperties:
+          type: integer
+        description: Clicks by device type (mobile/desktop/tablet)
+        type: object
+      recentActivity:
+        description: Recent user activities
+        items:
+          $ref: '#/definitions/model.ActivityLog'
+        type: array
+      topUrls:
+        description: Top performing URLs by clicks
+        items:
+          $ref: '#/definitions/model.URLStats'
+        type: array
+      totalClicks:
+        description: Total clicks across all URLs
+        type: integer
+      totalUrls:
+        description: Total number of URLs created
+        type: integer
+    type: object
   model.UserResponse:
     properties:
       active:
@@ -379,6 +492,9 @@ definitions:
       id:
         type: string
       lastLoginAt:
+        type: string
+      securityPhrase:
+        description: User's security phrase (safe to expose)
         type: string
       verified:
         type: boolean
@@ -656,6 +772,42 @@ paths:
       summary: Bulk delete URLs
       tags:
       - Admin
+  /api/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send password reset magic link to email
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reset link sent message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "429":
+          description: Too many requests
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - Authentication
   /api/auth/login:
     post:
       consumes:
@@ -804,6 +956,77 @@ paths:
       summary: Resend OTP code
       tags:
       - Authentication
+  /api/auth/reset-password:
+    get:
+      description: Check if reset token is valid and not expired
+      parameters:
+      - description: Reset token (UUID)
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token valid
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid token format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Token not found or expired
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "410":
+          description: Token already used
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Validate password reset token
+      tags:
+      - Authentication
+    post:
+      consumes:
+      - application/json
+      description: Reset user password using reset token from email
+      parameters:
+      - description: Reset token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successful
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or weak password
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Token not found or expired
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "410":
+          description: Token already used
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Reset password with token
+      tags:
+      - Authentication
   /api/auth/verify-otp:
     post:
       consumes:
@@ -840,6 +1063,191 @@ paths:
       summary: Verify OTP code
       tags:
       - Authentication
+  /api/user/analytics:
+    get:
+      description: Get comprehensive analytics for authenticated user including click
+        trends, device breakdown, and top URLs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User analytics data
+          schema:
+            $ref: '#/definitions/model.UserAnalytics'
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user analytics
+      tags:
+      - User
+  /api/user/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change user password (requires current password)
+      parameters:
+      - description: Current and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or weak password
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Invalid current password or not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - User
+  /api/user/profile:
+    get:
+      description: Get current user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - User
+  /api/user/security-phrase:
+    put:
+      consumes:
+      - application/json
+      description: Set or update user's security phrase for email verification
+      parameters:
+      - description: Security phrase (3-50 characters)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SetSecurityPhraseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Security phrase updated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid phrase
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set security phrase
+      tags:
+      - User
+  /api/user/url/{shortURL}/logs:
+    get:
+      description: Get detailed access logs for a specific short URL
+      parameters:
+      - description: Short URL
+        in: path
+        name: shortURL
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access logs
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: URL does not belong to user
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: URL not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get URL access logs
+      tags:
+      - User
+  /api/user/urls:
+    get:
+      description: Retrieve all short URLs created by the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user's URLs
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all URLs for authenticated user
+      tags:
+      - User
   /cache/metrics:
     get:
       description: Returns cache performance metrics including hit rate, misses, and
