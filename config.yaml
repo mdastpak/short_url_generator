@@ -72,3 +72,22 @@ user_features:
   url_aliases_enabled: true            # Allow multiple short codes for same URL
   max_urls_per_user: 1000              # Maximum URLs per user (0 = unlimited)
   max_aliases_per_url: 10              # Maximum aliases per URL
+
+# Password validation rules
+password:
+  # User account passwords
+  user:
+    min_length: 8                     # Minimum password length for user accounts
+    max_length: 72                    # Maximum password length (bcrypt limit)
+    require_uppercase: true           # Require at least one uppercase letter
+    require_lowercase: true           # Require at least one lowercase letter
+    require_digit: true               # Require at least one digit
+    require_special: false            # Require at least one special character
+  # URL protection passwords
+  url:
+    min_length: 6                     # Minimum password length for URL protection (bcrypt minimum)
+    max_length: 72                    # Maximum password length (bcrypt limit)
+    require_uppercase: false          # Require at least one uppercase letter
+    require_lowercase: false          # Require at least one lowercase letter
+    require_digit: false              # Require at least one digit
+    require_special: false            # Require at least one special character

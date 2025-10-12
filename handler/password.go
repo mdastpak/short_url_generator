@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"short-url-generator/model"
+	"short-url-generator/utils"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -233,9 +234,10 @@ func (uh *UserHandler) SetURLPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate password
-	if len(req.Password) < 6 || len(req.Password) > 72 {
-		SendJSONError(w, http.StatusBadRequest, errors.New("invalid password length"), "Password must be 6-72 characters")
+	// Validate password using configured rules for URL protection
+	if err := utils.ValidateURLPassword(req.Password, uh.config); err != nil {
+		requirements := utils.GetPasswordRequirements(uh.config.Password.URL)
+		SendJSONError(w, http.StatusBadRequest, err, "Password does not meet requirements: "+requirements)
 		return
 	}
 

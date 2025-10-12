@@ -135,7 +135,7 @@ func main() {
 		Msg("JWT manager initialized")
 
 	// Create user handler
-	userHandler := handler.NewUserHandler(rdb, jwtManager, emailService, otpDuration)
+	userHandler := handler.NewUserHandler(rdb, jwtManager, emailService, otpDuration, cfg)
 	log.Info().
 		Bool("registration_enabled", cfg.UserFeatures.RegistrationEnabled).
 		Msg("User handler initialized")

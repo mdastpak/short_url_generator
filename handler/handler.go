@@ -363,6 +363,13 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	// Hash password if provided
 	if input.Password != "" {
+		// Validate password using configured rules for URL protection
+		if err := utils.ValidateURLPassword(input.Password, h.config); err != nil {
+			requirements := utils.GetPasswordRequirements(h.config.Password.URL)
+			SendJSONError(w, http.StatusBadRequest, err, "Password does not meet requirements: "+requirements)
+			return
+		}
+
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to hash password")

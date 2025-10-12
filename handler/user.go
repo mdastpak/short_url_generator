@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"short-url-generator/auth"
+	"short-url-generator/config"
 	"short-url-generator/email"
 	"short-url-generator/model"
+	"short-url-generator/utils"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
@@ -24,15 +26,17 @@ type UserHandler struct {
 	jwtManager   *auth.JWTManager
 	emailService *email.EmailService
 	otpDuration  time.Duration
+	config       config.Config
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(rdb *redis.Client, jwtManager *auth.JWTManager, emailService *email.EmailService, otpDuration time.Duration) *UserHandler {
+func NewUserHandler(rdb *redis.Client, jwtManager *auth.JWTManager, emailService *email.EmailService, otpDuration time.Duration, cfg config.Config) *UserHandler {
 	return &UserHandler{
 		redis:        rdb,
 		jwtManager:   jwtManager,
 		emailService: emailService,
 		otpDuration:  otpDuration,
+		config:       cfg,
 	}
 }
 
@@ -65,9 +69,10 @@ func (uh *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate password
-	if len(req.Password) < 8 {
-		SendJSONError(w, http.StatusBadRequest, errors.New("weak password"), "Password must be at least 8 characters")
+	// Validate password using configured rules
+	if err := utils.ValidateUserPassword(req.Password, uh.config); err != nil {
+		requirements := utils.GetPasswordRequirements(uh.config.Password.User)
+		SendJSONError(w, http.StatusBadRequest, err, "Password does not meet requirements: "+requirements)
 		return
 	}
 
@@ -816,9 +821,10 @@ func (uh *UserHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate password strength
-	if len(req.NewPassword) < 8 {
-		SendJSONError(w, http.StatusBadRequest, errors.New("weak password"), "Password must be at least 8 characters")
+	// Validate password strength using configured rules
+	if err := utils.ValidateUserPassword(req.NewPassword, uh.config); err != nil {
+		requirements := utils.GetPasswordRequirements(uh.config.Password.User)
+		SendJSONError(w, http.StatusBadRequest, err, "Password does not meet requirements: "+requirements)
 		return
 	}
 
@@ -953,9 +959,10 @@ func (uh *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate new password strength
-	if len(req.NewPassword) < 8 {
-		SendJSONError(w, http.StatusBadRequest, errors.New("weak password"), "Password must be at least 8 characters")
+	// Validate new password strength using configured rules
+	if err := utils.ValidateUserPassword(req.NewPassword, uh.config); err != nil {
+		requirements := utils.GetPasswordRequirements(uh.config.Password.User)
+		SendJSONError(w, http.StatusBadRequest, err, "Password does not meet requirements: "+requirements)
 		return
 	}
 

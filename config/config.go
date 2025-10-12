@@ -88,6 +88,20 @@ type UserFeaturesConfig struct {
 	MaxAliasesPerURL            int  `mapstructure:"max_aliases_per_url"`             // Max aliases per URL
 }
 
+type PasswordRulesConfig struct {
+	MinLength        int  `mapstructure:"min_length"`        // Minimum password length
+	MaxLength        int  `mapstructure:"max_length"`        // Maximum password length (bcrypt limit: 72)
+	RequireUppercase bool `mapstructure:"require_uppercase"` // Require at least one uppercase letter
+	RequireLowercase bool `mapstructure:"require_lowercase"` // Require at least one lowercase letter
+	RequireDigit     bool `mapstructure:"require_digit"`     // Require at least one digit
+	RequireSpecial   bool `mapstructure:"require_special"`   // Require at least one special character
+}
+
+type PasswordConfig struct {
+	User PasswordRulesConfig `mapstructure:"user"` // User account password rules
+	URL  PasswordRulesConfig `mapstructure:"url"`  // URL protection password rules
+}
+
 type Config struct {
 	WebServer    WebServerConfig    `mapstructure:"webserver"`
 	Redis        RedisConfig        `mapstructure:"redis"`
@@ -99,6 +113,7 @@ type Config struct {
 	Email        EmailConfig        `mapstructure:"email"`
 	JWT          JWTConfig          `mapstructure:"jwt"`
 	UserFeatures UserFeaturesConfig `mapstructure:"user_features"`
+	Password     PasswordConfig     `mapstructure:"password"`
 }
 
 func LoadConfig() (Config, error) {
@@ -209,4 +224,20 @@ func setDefaults() {
 	viper.SetDefault("user_features.url_aliases_enabled", true)
 	viper.SetDefault("user_features.max_urls_per_user", 1000)
 	viper.SetDefault("user_features.max_aliases_per_url", 10)
+
+	// Password validation defaults
+	// User account password rules (stricter)
+	viper.SetDefault("password.user.min_length", 8)
+	viper.SetDefault("password.user.max_length", 72)
+	viper.SetDefault("password.user.require_uppercase", true)
+	viper.SetDefault("password.user.require_lowercase", true)
+	viper.SetDefault("password.user.require_digit", true)
+	viper.SetDefault("password.user.require_special", false)
+	// URL protection password rules (more lenient)
+	viper.SetDefault("password.url.min_length", 6)
+	viper.SetDefault("password.url.max_length", 72)
+	viper.SetDefault("password.url.require_uppercase", false)
+	viper.SetDefault("password.url.require_lowercase", false)
+	viper.SetDefault("password.url.require_digit", false)
+	viper.SetDefault("password.url.require_special", false)
 }
