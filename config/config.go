@@ -54,6 +54,7 @@ type SecurityConfig struct {
 	SafeBrowsingAPIKey      string `mapstructure:"safe_browsing_api_key"`      // Google Safe Browsing API key (optional)
 	BotDetectionEnabled     bool   `mapstructure:"bot_detection_enabled"`      // Enable bot detection
 	BotMaxRequestsPerMinute int    `mapstructure:"bot_max_requests_per_minute"` // Max requests per minute before flagging as bot
+	AllowPrivateIPs         bool   `mapstructure:"allow_private_ips"`          // Allow shortening URLs that resolve to private IPs (for internal use)
 }
 
 type AdminConfig struct {
@@ -196,6 +197,7 @@ func setDefaults() {
 	viper.SetDefault("security.safe_browsing_api_key", "")       // Optional, leave empty to use blocklist only
 	viper.SetDefault("security.bot_detection_enabled", true)
 	viper.SetDefault("security.bot_max_requests_per_minute", 60) // 60 req/min per IP
+	viper.SetDefault("security.allow_private_ips", false)        // Disabled by default for security (SSRF protection)
 
 	// Admin defaults
 	viper.SetDefault("admin.enabled", true)

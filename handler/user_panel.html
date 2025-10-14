@@ -472,6 +472,47 @@
         .hidden {
             display: none !important;
         }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            align-items: center;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination .page-info {
+            color: var(--text-light);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -698,6 +739,8 @@
         let refreshToken = localStorage.getItem('refreshToken');
         let userData = JSON.parse(localStorage.getItem('userData') || 'null');
         let userUrls = [];
+        let currentPage = 1;
+        const itemsPerPage = 20;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -947,6 +990,7 @@
         async function loadUserUrls() {
             const urlList = document.getElementById('urlList');
             urlList.innerHTML = '<div class="loading">Loading your URLs...</div>';
+            currentPage = 1; // Reset to first page when reloading
 
             try {
                 const response = await fetch(`${API_BASE}/api/user/urls`, {
@@ -981,50 +1025,81 @@
                     return;
                 }
 
-                // Render URLs
-                urlList.innerHTML = userUrls.map(url => `
-                    <div class="url-item">
-                        <div class="url-item-header">
-                            <div class="url-info">
-                                <div class="short-url">${API_BASE}/${url.shortURL}</div>
-                                <div class="original-url">${url.originalURL}</div>
-                            </div>
-                            <div class="url-actions">
-                                <button class="btn btn-success" onclick="copyUrl('${url.shortURL}')">Copy</button>
-                                <button class="btn btn-primary" onclick="generateQR('${url.shortURL}')">QR</button>
-                                <button class="btn btn-primary" onclick='editUrl(${JSON.stringify(url)})'>Edit</button>
-                                <button class="btn btn-danger" onclick='deleteUrl(${JSON.stringify(url)})'>Delete</button>
-                            </div>
-                        </div>
-                        <div class="url-stats">
-                            <div class="url-stat">
-                                <div class="label">Clicks</div>
-                                <div class="value">${url.currentUsage || 0}</div>
-                            </div>
-                            <div class="url-stat">
-                                <div class="label">Max Usage</div>
-                                <div class="value">${url.maxUsage > 0 ? url.maxUsage : 'Unlimited'}</div>
-                            </div>
-                            <div class="url-stat">
-                                <div class="label">Created</div>
-                                <div class="value">${new Date(url.createdAt).toLocaleDateString()}</div>
-                            </div>
-                            <div class="url-stat">
-                                <div class="label">Expiry</div>
-                                <div class="value">${url.expiry && new Date(url.expiry).getTime() > 0 ? new Date(url.expiry).toLocaleDateString() : 'Never'}</div>
-                            </div>
-                            <div class="url-stat">
-                                <div class="label">Status</div>
-                                <div class="value">${url.active ? '✅ Active' : '❌ Inactive'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+                // Render paginated URLs
+                renderURLs();
 
             } catch (error) {
                 console.error('Load URLs error:', error);
                 urlList.innerHTML = '<div class="error-message">Failed to load URLs. Please try again.</div>';
             }
+        }
+
+        // Render URLs with Pagination
+        function renderURLs() {
+            const urlList = document.getElementById('urlList');
+            const totalPages = Math.ceil(userUrls.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageURLs = userUrls.slice(startIndex, endIndex);
+
+            // Render URLs for current page
+            let html = pageURLs.map(url => `
+                <div class="url-item">
+                    <div class="url-item-header">
+                        <div class="url-info">
+                            <div class="short-url">${API_BASE}/${url.shortURL}</div>
+                            <div class="original-url">${url.originalURL}</div>
+                        </div>
+                        <div class="url-actions">
+                            <button class="btn btn-success" onclick="copyUrl('${url.shortURL}')">Copy</button>
+                            <button class="btn btn-primary" onclick="generateQR('${url.shortURL}')">QR</button>
+                            <button class="btn btn-primary" onclick='editUrl(${JSON.stringify(url)})'>Edit</button>
+                            <button class="btn btn-danger" onclick='deleteUrl(${JSON.stringify(url)})'>Delete</button>
+                        </div>
+                    </div>
+                    <div class="url-stats">
+                        <div class="url-stat">
+                            <div class="label">Clicks</div>
+                            <div class="value">${url.currentUsage || 0}</div>
+                        </div>
+                        <div class="url-stat">
+                            <div class="label">Max Usage</div>
+                            <div class="value">${url.maxUsage > 0 ? url.maxUsage : 'Unlimited'}</div>
+                        </div>
+                        <div class="url-stat">
+                            <div class="label">Created</div>
+                            <div class="value">${new Date(url.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div class="url-stat">
+                            <div class="label">Expiry</div>
+                            <div class="value">${url.expiry && new Date(url.expiry).getTime() > 0 ? new Date(url.expiry).toLocaleDateString() : 'Never'}</div>
+                        </div>
+                        <div class="url-stat">
+                            <div class="label">Status</div>
+                            <div class="value">${url.active ? '✅ Active' : '❌ Inactive'}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add pagination controls
+            if (totalPages > 1) {
+                html += '<div class="pagination">';
+                html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">Previous</button>`;
+                html += `<span class="page-info">Page ${currentPage} of ${totalPages} (${userUrls.length} total URLs)</span>`;
+                html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">Next</button>`;
+                html += '</div>';
+            }
+
+            urlList.innerHTML = html;
+        }
+
+        // Change Page
+        function changePage(page) {
+            currentPage = page;
+            renderURLs();
+            // Scroll to top of URL list
+            document.getElementById('urlList').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         // Edit URL

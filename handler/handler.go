@@ -203,8 +203,8 @@ func (h *URLHandler) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate URL
-	if err := utils.ValidateURL(input.OriginalURL); err != nil {
+	// Validate URL (with private IP check based on config)
+	if err := utils.ValidateURLWithOptions(input.OriginalURL, h.config.Security.AllowPrivateIPs); err != nil {
 		log.Warn().Err(err).Str("url", input.OriginalURL).Msg("Invalid URL")
 		SendJSONError(w, http.StatusBadRequest, err, "")
 		return
@@ -565,30 +565,6 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if password-protected and validate session
-	if url.PasswordHash != "" {
-		// Check for valid session cookie
-		cookieName := fmt.Sprintf("url_access_%s", shortURL)
-		cookie, err := r.Cookie(cookieName)
-
-		validSession := false
-		if err == nil && cookie.Value != "" {
-			// Verify session exists in Redis
-			sessionKey := fmt.Sprintf("password_session:%s:%s", shortURL, cookie.Value)
-			exists, _ := h.redis.Exists(ctx, sessionKey).Result()
-			validSession = exists > 0
-		}
-
-		if !validSession {
-			// No valid session, redirect to password prompt
-			log.Info().Str("short_url", shortURL).Msg("Password required, redirecting to prompt")
-			http.Redirect(w, r, "/password/"+shortURL, http.StatusFound)
-			return
-		}
-		// Valid session exists, continue with redirect
-		log.Debug().Str("short_url", shortURL).Msg("Valid password session found")
-	}
-
 	// Check scheduled start time
 	if !url.ScheduledStart.IsZero() && time.Now().Before(url.ScheduledStart) {
 		log.Info().
@@ -668,6 +644,33 @@ func (h *URLHandler) RedirectURL(w http.ResponseWriter, r *http.Request) {
 
 		SendJSONError(w, http.StatusForbidden, errors.New("URL usage limit exceeded"), "")
 		return
+	}
+
+	// Check if password-protected and validate session
+	// IMPORTANT: This check must happen BEFORE incrementing usage count
+	// to prevent counting clicks when users haven't entered the password yet
+	if url.PasswordHash != "" {
+		// Check for valid session cookie
+		cookieName := fmt.Sprintf("url_access_%s", shortURL)
+		cookie, err := r.Cookie(cookieName)
+
+		validSession := false
+		if err == nil && cookie.Value != "" {
+			// Verify session exists in Redis
+			sessionKey := fmt.Sprintf("password_session:%s:%s", shortURL, cookie.Value)
+			exists, _ := h.redis.Exists(ctx, sessionKey).Result()
+			validSession = exists > 0
+		}
+
+		if !validSession {
+			// No valid session, redirect to password prompt
+			// DO NOT increment usage count or log access
+			log.Info().Str("short_url", shortURL).Msg("Password required, redirecting to prompt")
+			http.Redirect(w, r, "/password/"+shortURL, http.StatusFound)
+			return
+		}
+		// Valid session exists, continue with redirect
+		log.Debug().Str("short_url", shortURL).Msg("Valid password session found")
 	}
 
 	// Increment usage count

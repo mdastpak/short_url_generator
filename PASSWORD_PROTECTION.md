@@ -76,8 +76,11 @@ The URL shortening service supports optional password protection for short URLs.
 2. If password-protected and no valid session → redirect to `/password/{shortURL}`
 3. User enters password on prompt page
 4. Submit to `POST /verify-password/{shortURL}`
-5. If correct → set session cookie → redirect to original URL
-6. If incorrect → show error message
+5. If correct → set session cookie → redirect back to `/{shortURL}`
+6. Cookie validated → usage counter incremented → redirect to original URL
+7. If incorrect → show error message
+
+**Important**: After successful password verification, the user is redirected back to the short URL (not directly to the original URL). This ensures that clicks are properly counted and access is logged through the standard redirect handler.
 
 **Endpoint**: `GET /{shortURL}`
 

@@ -17,12 +17,12 @@ This document outlines the implementation plan for adding a complete user authen
 - ⏳ Logout endpoint
 
 ### 2. User Panel Dashboard
-- ⏳ User dashboard HTML UI
-- ⏳ My URLs page (list, search, filter)
-- ⏳ Create URL form with all features
-- ⏳ URL details/edit page
-- ⏳ User profile/settings page
-- ⏳ Dark mode toggle
+- ✅ User dashboard HTML UI
+- ✅ My URLs page (list with pagination - 20 items per page)
+- ✅ Create URL form with all features
+- ✅ URL details/edit page
+- ✅ User profile/settings page
+- ✅ Dark mode toggle
 
 ### 3. Advanced URL Features
 - ✅ URL model updated with new fields

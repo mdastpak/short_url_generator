@@ -41,6 +41,7 @@ security:
   safe_browsing_api_key: ""    # Google Safe Browsing API key (optional, leave empty to use blocklist only)
   bot_detection_enabled: true  # Enable bot detection
   bot_max_requests_per_minute: 60  # Max requests per minute per IP before flagging as bot
+  allow_private_ips: true      # Allow shortening URLs that resolve to private IPs (for internal use) - WARNING: Disable SSRF protection!
 
 admin:
   enabled: true                     # Enable admin dashboard and API

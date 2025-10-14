@@ -10,6 +10,11 @@ import (
 
 // ValidateURL checks if the provided URL is valid and safe
 func ValidateURL(rawURL string) error {
+	return ValidateURLWithOptions(rawURL, false)
+}
+
+// ValidateURLWithOptions checks if the provided URL is valid and safe with configurable options
+func ValidateURLWithOptions(rawURL string, allowPrivateIPs bool) error {
 	if rawURL == "" {
 		return ErrEmptyURL
 	}
@@ -38,8 +43,8 @@ func ValidateURL(rawURL string) error {
 		return ErrLocalhostNotAllowed
 	}
 
-	// Block private IP addresses
-	if isPrivateIP(hostname) {
+	// Block private IP addresses unless explicitly allowed
+	if !allowPrivateIPs && isPrivateIP(hostname) {
 		return ErrPrivateIPNotAllowed
 	}
 

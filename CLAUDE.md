@@ -177,9 +177,10 @@ The service includes a complete user authentication system with JWT tokens and a
 - **Registration**: Email + password signup with OTP verification
 - **Login**: JWT-based authentication (access token + refresh token)
 - **Dashboard**: Real-time stats (total URLs, active URLs, total clicks, scheduled URLs)
-- **URL Management**: Create, view, edit, delete short URLs
+- **URL Management**: Create, view, edit, delete short URLs with pagination (20 URLs per page)
 - **Dark Mode**: Persistent theme toggle with localStorage
 - **Responsive Design**: Mobile-friendly interface
+- **Pagination**: Client-side pagination for URL list with Previous/Next buttons and page indicators
 
 **User-Created URLs:**
 - Automatically associated with user via UserID field
@@ -384,6 +385,8 @@ curl http://localhost:8080/cache/metrics
 
 ### Security
 - URL validation prevents SSRF attacks (utils/validator.go)
+  - Blocks localhost and private IPs by default (configurable via `security.allow_private_ips`)
+  - Set `allow_private_ips: true` for internal/intranet deployments
 - Rate limiting prevents abuse (middleware/ratelimit.go)
 - All Redis operations have timeouts to prevent hanging
 - Management API uses multi-factor validation:
