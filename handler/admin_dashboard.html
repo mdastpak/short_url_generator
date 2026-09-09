@@ -355,6 +355,237 @@
                 padding: 8px;
             }
         }
+        /*
+         * THESIS: A calm control room for operating links, not a promotional dashboard.
+         * OWN-WORLD: Ink, paper, teal signal, hairline rules, and compact data typography.
+         * STORY: Authenticate, scan the service pulse, then drill into URLs, security, or health.
+         * FIRST VIEWPORT: A quiet sign-in panel; once authenticated, a persistent rail and one focused workspace.
+         * FORM: Operate console with rail navigation, metric strip, and dense-but-readable tables.
+         */
+        :root {
+            --ink: #17252b;
+            --ink-soft: #5c6c72;
+            --paper: #f4f7f6;
+            --surface: #ffffff;
+            --surface-muted: #e7efed;
+            --line: #d4dfdc;
+            --teal: #087f78;
+            --teal-dark: #05615c;
+            --teal-pale: #d8f1ec;
+            --coral: #b84a3c;
+            --shadow: 0 18px 45px rgba(23, 37, 43, .10);
+            --radius: 14px;
+            --header-bg: #17252b;
+            --header-text: #f4fbf9;
+            --header-muted: #d9e6e3;
+        }
+
+        html { background: var(--paper); }
+        body {
+            background: var(--paper);
+            color: var(--ink);
+            padding: 24px;
+            font-family: Aptos, "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
+            letter-spacing: -.01em;
+        }
+        button, input, select { font: inherit; }
+        button:focus-visible, input:focus-visible, select:focus-visible, .tab:focus-visible, a:focus-visible {
+            outline: 3px solid rgba(8, 127, 120, .3);
+            outline-offset: 2px;
+        }
+        .container { max-width: 1480px; }
+        .login-screen { min-height: calc(100vh - 48px); }
+        .login-box {
+            max-width: 430px;
+            padding: 44px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .login-box h2 {
+            color: var(--ink);
+            text-align: left;
+            font-size: clamp(28px, 4vw, 40px);
+            letter-spacing: -.055em;
+            margin-bottom: 8px;
+        }
+        .login-box h2::after {
+            content: " · service operations";
+            color: var(--teal);
+            font-size: .45em;
+            letter-spacing: 0;
+            white-space: nowrap;
+        }
+        .login-box input[type="password"] {
+            margin: 24px 0 12px;
+            padding: 14px 15px;
+            background: #fbfcfc;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            color: var(--ink);
+        }
+        .login-box input[type="password"]:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 4px rgba(8,127,120,.12); }
+        .login-box button {
+            padding: 13px 18px;
+            background: var(--teal);
+            border-radius: 9px;
+            font-weight: 700;
+        }
+        .login-box button:hover { background: var(--teal-dark); }
+        .error-message { background: #fde9e6; color: #8d3026; border: 1px solid #f3c7c0; }
+        #dashboard { min-height: calc(100vh - 48px); }
+        #dashboard > .container { display: grid; grid-template-columns: 218px minmax(0, 1fr); gap: 24px; align-items: start; }
+        .header {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            position: sticky;
+            top: 24px;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 18px;
+            background: var(--header-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            min-height: 275px;
+        }
+        .header h1 { color: var(--header-text); font-size: 22px; line-height: 1.1; letter-spacing: -.045em; }
+        .header h1::first-letter { color: #71d9ca; }
+        .header .logout {
+            width: 100%;
+            margin-top: auto;
+            padding: 10px 12px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,.25);
+            color: var(--header-muted);
+            border-radius: 8px;
+        }
+        .header .logout:hover { background: rgba(255,255,255,.1); }
+        .theme-toggle {
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,.25);
+            color: var(--header-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .theme-toggle:hover { border-color: #71d9ca; color: var(--header-text); }
+        .tabs {
+            grid-column: 2;
+            grid-row: 1;
+            display: flex;
+            gap: 6px;
+            padding: 5px;
+            margin: 0;
+            background: var(--surface-muted);
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            box-shadow: none;
+        }
+        .tab {
+            flex: 1;
+            padding: 11px 14px;
+            color: var(--ink-soft);
+            background: transparent;
+            border-radius: 7px;
+            text-align: center;
+            box-shadow: none;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .tab:hover { transform: none; background: rgba(255,255,255,.65); }
+        .tab.active { background: var(--surface); color: var(--teal-dark); box-shadow: 0 2px 8px rgba(23,37,43,.08); }
+        .content {
+            grid-column: 2;
+            grid-row: 2;
+            padding: 30px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .content h2 { color: var(--ink) !important; font-size: 26px; letter-spacing: -.04em; margin-bottom: 24px !important; }
+        .stats-grid { gap: 12px; margin-bottom: 26px; }
+        .stat-card {
+            background: var(--ink);
+            padding: 20px;
+            border: 0;
+            border-radius: 11px;
+            box-shadow: none;
+        }
+        .stat-card h3 { color: #a9c0ba; font-size: 11px; letter-spacing: .09em; }
+        .stat-card .value { color: #f4fbf9; font-size: 34px; letter-spacing: -.06em; }
+        .stat-card .subtext { color: #b7cbc7; }
+        #cacheStats { border-top: 1px solid var(--line); padding-top: 24px; }
+        #cacheStats h3 { color: var(--ink) !important; font-size: 15px; }
+        #cacheStats > div { background: var(--surface-muted) !important; border: 1px solid var(--line); }
+        #cacheStats p { color: var(--ink-soft) !important; }
+        .controls { gap: 10px; }
+        .controls input, .controls select, .controls button {
+            padding: 11px 13px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--ink);
+            background: var(--surface);
+        }
+        .controls input:focus, .controls select:focus { border-color: var(--teal); outline: none; }
+        .controls button { background: var(--teal); color: white; border-color: var(--teal); font-weight: 700; }
+        .controls button:hover { background: var(--teal-dark); }
+        table { margin-top: 14px; }
+        table th { background: var(--surface-muted); color: var(--ink-soft); padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
+        table td { padding: 14px; border-bottom: 1px solid var(--line); color: var(--ink); }
+        table tr:hover { background: #f5faf8; }
+        .url-link { color: var(--teal-dark); font-weight: 650; }
+        .badge { padding: 4px 9px; border-radius: 999px; font-size: 11px; }
+        .badge.active { background: var(--teal-pale); color: var(--teal-dark); }
+        .badge.expired { background: #fde9e6; color: #8d3026; }
+        .pagination button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+        .pagination button.active { background: var(--teal); border-color: var(--teal); }
+        .health-item { padding: 18px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
+        .health-item h4 { color: var(--ink); }
+        .health-status.ok { background: var(--teal-pale); color: var(--teal-dark); }
+        .health-status.error { background: #fde9e6; color: #8d3026; }
+        @media (max-width: 860px) {
+            body { padding: 14px; }
+            #dashboard { min-height: calc(100vh - 28px); }
+            #dashboard > .container { grid-template-columns: 1fr; gap: 14px; }
+            .header { grid-column: 1; grid-row: 1; position: static; min-height: auto; display: flex; align-items: center; justify-content: space-between; padding: 16px; }
+            .header .logout { width: auto; margin-top: 0; }
+            .tabs { grid-column: 1; grid-row: 2; overflow-x: auto; }
+            .tab { flex: 0 0 auto; white-space: nowrap; }
+            .content { grid-column: 1; grid-row: 3; padding: 20px; }
+            .content:has(#urlsList) { overflow-x: auto; }
+        }
+        @media (max-width: 560px) {
+            .login-box { padding: 28px 22px; }
+            .content { padding: 16px; }
+            .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            table { min-width: 680px; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+        [data-theme="dark"] {
+            --paper: #101a1e;
+            --surface: #19282d;
+            --surface-muted: #21363a;
+            --ink: #edf8f5;
+            --ink-soft: #adc3be;
+            --line: #355057;
+            --teal: #55cfc0;
+            --teal-dark: #75e1d2;
+            --teal-pale: #214d4b;
+            --header-bg: #0b1316;
+            --header-text: #f4fbf9;
+            --header-muted: #c6d9d4;
+        }
+        [data-theme="dark"] body, [data-theme="dark"] html { background: var(--paper); }
+        [data-theme="dark"] .login-box input[type="password"] { background: #142226; color: var(--ink); }
+        [data-theme="dark"] table tr:hover { background: #20363a; }
+        [data-theme="dark"] .content h2,
+        [data-theme="dark"] #cacheStats h3 { color: var(--ink) !important; }
     </style>
 </head>
 <body>
@@ -378,6 +609,9 @@
         <div class="container">
             <div class="header">
                 <h1>📊 Admin Dashboard</h1>
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle color theme">
+                    <span id="themeIcon">☾ Dark mode</span>
+                </button>
                 <button class="logout" onclick="logout()">Logout</button>
             </div>
 
@@ -522,6 +756,25 @@
         let searchQuery = '';
         let statusFilter = 'all';
 
+        function initTheme() {
+            const theme = localStorage.getItem('adminTheme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('adminTheme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.textContent = theme === 'dark' ? '☀ Light mode' : '☾ Dark mode';
+        }
+
         // Configuration
         const AUTH_CONFIG = {
             // Storage type: 'localStorage' (persistent), 'sessionStorage' (until browser close), or 'none' (no storage)
@@ -538,6 +791,7 @@
 
         // Check for existing API key and validate session
         window.onload = function() {
+            initTheme();
             if (AUTH_CONFIG.storageType === 'none') {
                 return; // No auto-login
             }
