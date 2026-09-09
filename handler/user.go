@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -1164,30 +1165,15 @@ func (uh *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 // Helper functions
 
-// getIP extracts IP address from request
+// getIP extracts the client IP from the direct socket peer. We intentionally do
+// not trust X-Forwarded-For or X-Real-IP unless the app runs behind a trusted
+// reverse proxy that strips those headers before forwarding the request.
 func getIP(r *http.Request) string {
-	// Check X-Forwarded-For header first (reverse proxy)
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		// Get first IP if multiple
-		ips := strings.Split(ip, ",")
-		return strings.TrimSpace(ips[0])
+	ip := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		return host
 	}
-
-	// Check X-Real-IP header
-	ip = r.Header.Get("X-Real-IP")
-	if ip != "" {
-		return ip
-	}
-
-	// Fall back to RemoteAddr
-	ip = r.RemoteAddr
-	// Remove port if present
-	if idx := strings.LastIndex(ip, ":"); idx != -1 {
-		ip = ip[:idx]
-	}
-
-	return ip
+	return strings.Trim(ip, "[]")
 }
 
 // sanitizeSecurityPhrase removes dangerous characters from security phrase

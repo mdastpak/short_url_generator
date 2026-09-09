@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"log"
 
 	"github.com/spf13/viper"
@@ -139,6 +140,10 @@ func LoadConfig() (Config, error) {
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Printf("Unable to decode into struct: %v", err)
 		return config, err
+	}
+
+	if config.JWT.SecretKey == "" {
+		return config, errors.New("jwt.secret_key must be set via config file or SHORTURL_JWT_SECRET_KEY")
 	}
 
 	log.Println("Configuration loaded successfully")

@@ -67,17 +67,29 @@ func isLocalhost(hostname string) bool {
 
 // isPrivateIP checks if the hostname is a private IP address
 func isPrivateIP(hostname string) bool {
-	ip := net.ParseIP(hostname)
-	if ip == nil {
-		// Not an IP address, try to resolve it
-		ips, err := net.LookupIP(hostname)
-		if err != nil || len(ips) == 0 {
-			return false
-		}
-		ip = ips[0]
+	if ip := net.ParseIP(hostname); ip != nil {
+		return isPrivateIPValue(ip)
 	}
 
-	// Check if IP is in private ranges
+	ips, err := net.LookupIP(hostname)
+	if err != nil || len(ips) == 0 {
+		return false
+	}
+
+	for _, ip := range ips {
+		if isPrivateIPValue(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isPrivateIPValue(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+
 	privateRanges := []string{
 		"10.0.0.0/8",
 		"172.16.0.0/12",
