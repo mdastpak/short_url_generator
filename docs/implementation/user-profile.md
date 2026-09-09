@@ -1268,7 +1268,7 @@ async function updateSecurityPhrase() {
 
 4. **Documentation**
    - [ ] Update API documentation (Swagger)
-   - [ ] Update CLAUDE.md
+   - [ ] Update docs/architecture.md
    - [ ] Update README.md
    - [ ] Create user guide
 

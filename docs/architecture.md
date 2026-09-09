@@ -1,18 +1,11 @@
-# CLAUDE.md
+# Architecture and Development Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This document describes the service architecture, development commands, and
+operational conventions for contributors.
 
 ## Project Overview
 
 A production-ready URL shortening service built with Go that uses Redis for persistence. Features include structured logging, rate limiting, CORS support, URL validation, graceful shutdown, and comprehensive error handling.
-
-## Documentation Structure
-
-- **[ROADMAP.md](ROADMAP.md)**: Development roadmap and planned features
-- **[CUSTOM_DOMAINS.md](CUSTOM_DOMAINS.md)**: Comprehensive analysis of custom domain implementation approaches
-- **[DEDUPLICATION.md](DEDUPLICATION.md)**: URL deduplication feature documentation
-- **[IMPROVEMENTS.md](IMPROVEMENTS.md)**: Change history and improvement tracking
-- **[USER_PANEL_IMPLEMENTATION.md](USER_PANEL_IMPLEMENTATION.md)**: User authentication and panel documentation
 
 ## Architecture
 

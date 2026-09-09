@@ -33,9 +33,6 @@ go.work.sum
 *~
 .DS_Store
 
-# Claude Code settings (local only)
-.claude/
-
 # Environment files (IMPORTANT - contains secrets!)
 .env
 .env.local

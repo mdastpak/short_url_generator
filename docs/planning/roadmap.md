@@ -188,7 +188,7 @@ user_features:
 4. `main.go` - Add new route for `/{userSlug}/{shortURL}`
 5. `handler/user_panel.html` - UI for slug management and URL display
 6. `config/config.go` - Add user slug configuration options
-7. `CLAUDE.md` - Document new feature architecture
+7. `docs/architecture.md` - Document new feature architecture
 
 #### Testing Requirements
 - Unit tests for slug validation
@@ -235,7 +235,7 @@ user_features:
 ### 5. Custom Branded Domains (Medium-High Priority)
 **Status:** Planned - Analysis Complete
 **Target Version:** v2.5.0
-**Documentation:** See [CUSTOM_DOMAINS.md](CUSTOM_DOMAINS.md)
+**Documentation:** See [custom-domains.md](../features/custom-domains.md)
 
 Complete custom domain support allowing users to serve short URLs through their own branded domains (e.g., `gog.le` instead of the main service domain).
 
