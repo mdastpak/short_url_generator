@@ -485,7 +485,7 @@ curl -X POST http://localhost:8080/shorten \
 # Returns: http://localhost:8080/xyz789 (201 Created) ✅ New short URL
 ```
 
-See [DEDUPLICATION.md](DEDUPLICATION.md) for complete documentation.
+See [deduplication.md](docs/features/deduplication.md) for complete documentation.
 
 ## URL Management
 
@@ -683,28 +683,28 @@ security:
 ### Security Best Practices
 
 1. **Enable all security features:**
-   ```yaml
-   security:
+```yaml
+  security:
      url_scanning_enabled: true
      blocklist_enabled: true
      bot_detection_enabled: true
-   ```
+```
 
 2. **Get Safe Browsing API key** for enhanced protection
 
 3. **Monitor security events** in logs:
-   ```bash
-   # Check for blocked URLs
+```bash
+  # Check for blocked URLs
    grep "Malicious URL detected" logs/app.log
 
    # Check for bot activity
    grep "Bot detected" logs/app.log
-   ```
+```
 
 4. **Customize blocklist** for your use case:
-   - Add industry-specific threats
-   - Block competitor domains (if needed)
-   - Add custom patterns
+    - Add industry-specific threats
+    - Block competitor domains (if needed)
+    - Add custom patterns
 
 ## Development
 
@@ -904,19 +904,19 @@ curl -H "X-Admin-Key: your-secret-admin-key" \
 ### Security Best Practices
 
 1. **Strong API Key**: Use a cryptographically random key (32+ characters)
-   ```bash
-   # Generate a secure key
+```bash
+  # Generate a secure key
    openssl rand -base64 32
-   ```
+```
 
 2. **HTTPS Only**: Always use HTTPS in production to protect the API key
 
 3. **Restrict Access**: Configure firewall rules to limit admin endpoint access:
-   ```bash
-   # Only allow from specific IP
+```bash
+  # Only allow from specific IP
    iptables -A INPUT -p tcp --dport 8080 -m string --string "/admin" --algo bm -s 192.168.1.100 -j ACCEPT
    iptables -A INPUT -p tcp --dport 8080 -m string --string "/admin" --algo bm -j DROP
-   ```
+```
 
 4. **Environment Variables**: Never commit API keys to git, use environment variables
 
@@ -950,7 +950,7 @@ The admin dashboard features:
 
 ## Planned Features
 
-See **[ROADMAP.md](ROADMAP.md)** for complete development roadmap. Highlights include:
+See [**roadmap.md**](docs/planning/roadmap.md) for complete development roadmap. Highlights include:
 
 ### Coming in v2.1-2.5
 - 🔗 **User-Specific URL Paths** (v2.1.0): Brand your URLs with custom user slugs
@@ -962,7 +962,7 @@ See **[ROADMAP.md](ROADMAP.md)** for complete development roadmap. Highlights in
   - **Two implementation approaches available:**
     - **Approach 1 (Simple)**: 4 weeks, $50-100/month, perfect for startups
     - **Approach 2 (Advanced)**: 8 weeks, $300-1000/month, enterprise-grade with CDN
-  - See **[CUSTOM_DOMAINS.md](CUSTOM_DOMAINS.md)** for complete technical analysis
+  - See [**custom-domains.md**](docs/features/custom-domains.md) for complete technical analysis
 
 - 📊 **Analytics Dashboard** (v2.2.0): Visual analytics with charts and insights
 - 📁 **URL Collections** (v2.3.0): Organize URLs into folders
@@ -973,15 +973,13 @@ See **[ROADMAP.md](ROADMAP.md)** for complete development roadmap. Highlights in
 - 🔗 **Link-in-Bio** (v3.2.0): Social media landing pages
 - 🔔 **Webhook Support** (v3.3.0): Event notifications
 
-**See [ROADMAP.md](ROADMAP.md) for detailed timelines and technical specifications.**
+**See** [**roadmap.md**](docs/planning/roadmap.md) **for detailed timelines and technical specifications.**
 
 ## Documentation
 
-- **[README.md](README.md)**: This file - Complete user guide and API reference
-- **[CLAUDE.md](CLAUDE.md)**: Architecture and development guide for Claude Code
-- **[DEDUPLICATION.md](DEDUPLICATION.md)**: URL deduplication feature documentation
-- **[ROADMAP.md](ROADMAP.md)**: Development roadmap and planned features
-- **[CUSTOM_DOMAINS.md](CUSTOM_DOMAINS.md)**: Custom domain implementation analysis (two approaches)
+- [**README.md**](README.md): This file - Complete user guide and API reference
+- [**Architecture and development guide**](docs/architecture.md): Service architecture, commands, and operational conventions
+- [**Documentation index**](docs/README.md): Organized feature, implementation, planning, and product documentation
 
 ## Contributing
 
