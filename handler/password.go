@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"short-url-generator/model"
 	"short-url-generator/utils"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -372,24 +374,15 @@ func (uh *UserHandler) RemoveURLPassword(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// Helper function to get IP address from request
+// Helper function to get IP address from request.
+// The app should only trust the direct peer address unless a reverse proxy strips
+// untrusted X-Forwarded-For headers before relaying the request.
 func getIPAddress(r *http.Request) string {
-	// Check X-Forwarded-For header first (reverse proxy)
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		// Get first IP if multiple
-		ips := r.Header.Get("X-Forwarded-For")
-		if idx := len(ips); idx > 0 {
-			return ips
-		}
+	ip := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	} else {
+		ip = strings.Trim(ip, "[]")
 	}
-
-	// Check X-Real-IP header
-	ip = r.Header.Get("X-Real-IP")
-	if ip != "" {
-		return ip
-	}
-
-	// Fall back to RemoteAddr
-	return r.RemoteAddr
+	return ip
 }

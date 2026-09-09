@@ -1,6 +1,7 @@
 package security
 
 import (
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -219,29 +220,16 @@ func (bd *BotDetector) cleanupOldEntries() {
 	}
 }
 
-// getClientIP extracts client IP from request
+// getClientIP extracts the real client IP from request metadata.
+// We intentionally ignore proxy headers because they are user-controlled unless
+// a trusted reverse proxy strips or overwrites them before they reach the app.
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header first (for proxies/load balancers)
-	forwarded := r.Header.Get("X-Forwarded-For")
-	if forwarded != "" {
-		// Take the first IP if there are multiple
-		ips := strings.Split(forwarded, ",")
-		return strings.TrimSpace(ips[0])
-	}
-
-	// Check X-Real-IP header
-	realIP := r.Header.Get("X-Real-IP")
-	if realIP != "" {
-		return realIP
-	}
-
-	// Fall back to RemoteAddr
 	ip := r.RemoteAddr
-	// Remove port if present
-	if idx := strings.LastIndex(ip, ":"); idx != -1 {
-		ip = ip[:idx]
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	} else {
+		ip = strings.Trim(ip, "[]")
 	}
-
 	return ip
 }
 
